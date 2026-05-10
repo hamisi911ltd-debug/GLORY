@@ -5,9 +5,8 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// Cloudflare Workers adapter re-enabled — deploying to Cloudflare Pages
 export default defineConfig({
-  // Disable Cloudflare Workers adapter — we deploy to Vercel (Node.js)
-  cloudflare: false,
   tanstackStart: {
     server: { entry: "server" },
   },
