@@ -19,8 +19,8 @@ dist-ssr
 # Vercel build outputs — generated fresh on each deploy
 public/
 api/dist/
-api/server.js
 scripts/_entry.tmp.js
+scripts/_entry.tmp.cjs
 
 # Wrangler / Cloudflare
 .wrangler/
