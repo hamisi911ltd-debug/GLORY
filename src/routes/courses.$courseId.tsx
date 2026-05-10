@@ -57,7 +57,7 @@ function CoursePage() {
             <div className="mt-10">
               <h2 className="text-h2 text-navy">What's included</h2>
               <ul className="mt-4 space-y-3">
-                {course.includes.map((item) => (
+                {course.includes.map((item: string) => (
                   <li key={item} className="flex gap-3">
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success-light text-success">
                       <Check className="h-3 w-3" strokeWidth={3} />
