@@ -1,28 +1,28 @@
 /**
- * Vercel serverless function — DriveSchool Pro frontend.
+ * Vercel serverless function — DriveSchool Pro SSR handler.
+ * Built with @vercel/node builder.
  *
- * TanStack Start builds to dist/server/server.js (Web Fetch API handler).
- * Vercel's Node.js runtime uses (req, res) — this file bridges the two.
- *
- * vercel.json sets includeFiles: "dist/server/**" so the bundle
- * is available at runtime relative to the project root.
+ * TanStack Start outputs a Web Fetch API handler at dist/server/server.js.
+ * This adapter converts Vercel's (req, res) to Web Request/Response.
  */
 
-import { join } from "node:path";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-// __dirname is not available in ESM — use process.cwd() which Vercel sets
-// to the project root at runtime.
-const serverBundle = join(process.cwd(), "dist", "server", "server.js");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
 
-let server;
+// dist/server/ is included via vercel.json builds[].config.includeFiles
+const bundlePath = path.join(__dirname, "..", "dist", "server", "server.js");
+
+let server = null;
 try {
-  const mod = await import(serverBundle);
-  server = mod.default;
+  const mod = await import(bundlePath);
+  server = mod.default ?? mod;
 } catch (err) {
-  console.error("[Vercel] Could not load server bundle:", err.message);
+  console.error("[SSR] Failed to load bundle:", bundlePath, "\n", err.message);
 }
 
-// ── Node IncomingMessage → Web Request ───────────────────────────────────────
 async function toWebRequest(req) {
   const proto = req.headers["x-forwarded-proto"] ?? "https";
   const host  = req.headers["x-forwarded-host"] ?? req.headers.host ?? "localhost";
@@ -30,7 +30,7 @@ async function toWebRequest(req) {
 
   const headers = new Headers();
   for (const [k, v] of Object.entries(req.headers)) {
-    if (v === undefined) continue;
+    if (!v) continue;
     Array.isArray(v) ? v.forEach((x) => headers.append(k, x)) : headers.set(k, v);
   }
 
@@ -39,11 +39,11 @@ async function toWebRequest(req) {
   let body;
 
   if (hasBody) {
-    body = await new Promise((res, rej) => {
+    body = await new Promise((resolve, reject) => {
       const chunks = [];
       req.on("data",  (c) => chunks.push(c));
-      req.on("end",   () => res(Buffer.concat(chunks)));
-      req.on("error", rej);
+      req.on("end",   () => resolve(Buffer.concat(chunks)));
+      req.on("error", reject);
     });
   }
 
@@ -55,7 +55,6 @@ async function toWebRequest(req) {
   });
 }
 
-// ── Web Response → Node ServerResponse ───────────────────────────────────────
 async function toNodeResponse(webRes, res) {
   res.statusCode = webRes.status;
   for (const [k, v] of webRes.headers.entries()) res.setHeader(k, v);
@@ -74,12 +73,11 @@ async function toNodeResponse(webRes, res) {
   res.end();
 }
 
-// ── Vercel handler ────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (!server) {
     res.statusCode = 500;
     res.setHeader("content-type", "text/plain");
-    res.end("Server bundle failed to load. Check build logs.");
+    res.end("Server bundle failed to load. Check Vercel build logs.");
     return;
   }
   try {
@@ -87,9 +85,9 @@ export default async function handler(req, res) {
     const webRes = await server.fetch(webReq, process.env, {});
     await toNodeResponse(webRes, res);
   } catch (err) {
-    console.error("[handler]", err);
+    console.error("[handler error]", err);
     res.statusCode = 500;
     res.setHeader("content-type", "text/html");
-    res.end(`<h1>500</h1><p>${err.message}</p>`);
+    res.end(`<!doctype html><html><body><h1>500</h1><p>${err.message}</p></body></html>`);
   }
 }
