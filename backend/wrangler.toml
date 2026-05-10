@@ -1,0 +1,16 @@
+name = "driveschool-pro-api"
+main = "src/worker.js"
+compatibility_date = "2025-05-10"
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets are set via: wrangler secret put SECRET_NAME
+# Never put real values here — this file is committed to git.
+# Required secrets:
+#   SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#   SUPABASE_ANON_KEY
+#   FRONTEND_URL
+
+[vars]
+# Non-secret config vars (safe to commit)
+ENVIRONMENT = "production"

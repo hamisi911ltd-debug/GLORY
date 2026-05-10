@@ -14,7 +14,23 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CoursesCourseIdRouteImport } from './routes/courses.$courseId'
+import { Route as AuthenticatedTheoryRouteImport } from './routes/_authenticated/theory'
+import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedPaymentsRouteImport } from './routes/_authenticated/payments'
+import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
+import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedBookRouteImport } from './routes/_authenticated/book'
+import { Route as AuthenticatedStaffIndexRouteImport } from './routes/_authenticated/staff/index'
+import { Route as AuthenticatedSuperadminUsersRouteImport } from './routes/_authenticated/superadmin/users'
+import { Route as AuthenticatedSuperadminDashboardRouteImport } from './routes/_authenticated/superadmin/dashboard'
+import { Route as AuthenticatedStaffStudentsRouteImport } from './routes/_authenticated/staff/students'
+import { Route as AuthenticatedStaffInstructorRouteImport } from './routes/_authenticated/staff/instructor'
+import { Route as AuthenticatedStaffFleetRouteImport } from './routes/_authenticated/staff/fleet'
+import { Route as AuthenticatedStaffFinanceRouteImport } from './routes/_authenticated/staff/finance'
+import { Route as AuthenticatedStaffExaminerRouteImport } from './routes/_authenticated/staff/examiner'
+import { Route as AuthenticatedStaffDashboardRouteImport } from './routes/_authenticated/staff/dashboard'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -40,25 +56,145 @@ const CoursesCourseIdRoute = CoursesCourseIdRouteImport.update({
   path: '/courses/$courseId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTheoryRoute = AuthenticatedTheoryRouteImport.update({
+  id: '/theory',
+  path: '/theory',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedScheduleRoute = AuthenticatedScheduleRouteImport.update({
+  id: '/schedule',
+  path: '/schedule',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPaymentsRoute = AuthenticatedPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedNotificationsRoute =
+  AuthenticatedNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedDocumentsRoute = AuthenticatedDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedBookRoute = AuthenticatedBookRouteImport.update({
+  id: '/book',
+  path: '/book',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedStaffIndexRoute = AuthenticatedStaffIndexRouteImport.update({
+  id: '/staff/',
+  path: '/staff/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSuperadminUsersRoute =
+  AuthenticatedSuperadminUsersRouteImport.update({
+    id: '/superadmin/users',
+    path: '/superadmin/users',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSuperadminDashboardRoute =
+  AuthenticatedSuperadminDashboardRouteImport.update({
+    id: '/superadmin/dashboard',
+    path: '/superadmin/dashboard',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedStaffStudentsRoute =
+  AuthenticatedStaffStudentsRouteImport.update({
+    id: '/staff/students',
+    path: '/staff/students',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedStaffInstructorRoute =
+  AuthenticatedStaffInstructorRouteImport.update({
+    id: '/staff/instructor',
+    path: '/staff/instructor',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedStaffFleetRoute = AuthenticatedStaffFleetRouteImport.update({
+  id: '/staff/fleet',
+  path: '/staff/fleet',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedStaffFinanceRoute =
+  AuthenticatedStaffFinanceRouteImport.update({
+    id: '/staff/finance',
+    path: '/staff/finance',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedStaffExaminerRoute =
+  AuthenticatedStaffExaminerRouteImport.update({
+    id: '/staff/examiner',
+    path: '/staff/examiner',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedStaffDashboardRoute =
+  AuthenticatedStaffDashboardRouteImport.update({
+    id: '/staff/dashboard',
+    path: '/staff/dashboard',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/book': typeof AuthenticatedBookRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/documents': typeof AuthenticatedDocumentsRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
+  '/payments': typeof AuthenticatedPaymentsRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/schedule': typeof AuthenticatedScheduleRoute
+  '/theory': typeof AuthenticatedTheoryRoute
   '/courses/$courseId': typeof CoursesCourseIdRoute
+  '/staff/dashboard': typeof AuthenticatedStaffDashboardRoute
+  '/staff/examiner': typeof AuthenticatedStaffExaminerRoute
+  '/staff/finance': typeof AuthenticatedStaffFinanceRoute
+  '/staff/fleet': typeof AuthenticatedStaffFleetRoute
+  '/staff/instructor': typeof AuthenticatedStaffInstructorRoute
+  '/staff/students': typeof AuthenticatedStaffStudentsRoute
+  '/superadmin/dashboard': typeof AuthenticatedSuperadminDashboardRoute
+  '/superadmin/users': typeof AuthenticatedSuperadminUsersRoute
+  '/staff/': typeof AuthenticatedStaffIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/book': typeof AuthenticatedBookRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/documents': typeof AuthenticatedDocumentsRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
+  '/payments': typeof AuthenticatedPaymentsRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/schedule': typeof AuthenticatedScheduleRoute
+  '/theory': typeof AuthenticatedTheoryRoute
   '/courses/$courseId': typeof CoursesCourseIdRoute
+  '/staff/dashboard': typeof AuthenticatedStaffDashboardRoute
+  '/staff/examiner': typeof AuthenticatedStaffExaminerRoute
+  '/staff/finance': typeof AuthenticatedStaffFinanceRoute
+  '/staff/fleet': typeof AuthenticatedStaffFleetRoute
+  '/staff/instructor': typeof AuthenticatedStaffInstructorRoute
+  '/staff/students': typeof AuthenticatedStaffStudentsRoute
+  '/superadmin/dashboard': typeof AuthenticatedSuperadminDashboardRoute
+  '/superadmin/users': typeof AuthenticatedSuperadminUsersRoute
+  '/staff': typeof AuthenticatedStaffIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -66,22 +202,96 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/_authenticated/book': typeof AuthenticatedBookRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
+  '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
+  '/_authenticated/payments': typeof AuthenticatedPaymentsRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
+  '/_authenticated/theory': typeof AuthenticatedTheoryRoute
   '/courses/$courseId': typeof CoursesCourseIdRoute
+  '/_authenticated/staff/dashboard': typeof AuthenticatedStaffDashboardRoute
+  '/_authenticated/staff/examiner': typeof AuthenticatedStaffExaminerRoute
+  '/_authenticated/staff/finance': typeof AuthenticatedStaffFinanceRoute
+  '/_authenticated/staff/fleet': typeof AuthenticatedStaffFleetRoute
+  '/_authenticated/staff/instructor': typeof AuthenticatedStaffInstructorRoute
+  '/_authenticated/staff/students': typeof AuthenticatedStaffStudentsRoute
+  '/_authenticated/superadmin/dashboard': typeof AuthenticatedSuperadminDashboardRoute
+  '/_authenticated/superadmin/users': typeof AuthenticatedSuperadminUsersRoute
+  '/_authenticated/staff/': typeof AuthenticatedStaffIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register' | '/dashboard' | '/courses/$courseId'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/book'
+    | '/dashboard'
+    | '/documents'
+    | '/notifications'
+    | '/payments'
+    | '/profile'
+    | '/schedule'
+    | '/theory'
+    | '/courses/$courseId'
+    | '/staff/dashboard'
+    | '/staff/examiner'
+    | '/staff/finance'
+    | '/staff/fleet'
+    | '/staff/instructor'
+    | '/staff/students'
+    | '/superadmin/dashboard'
+    | '/superadmin/users'
+    | '/staff/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register' | '/dashboard' | '/courses/$courseId'
+  to:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/book'
+    | '/dashboard'
+    | '/documents'
+    | '/notifications'
+    | '/payments'
+    | '/profile'
+    | '/schedule'
+    | '/theory'
+    | '/courses/$courseId'
+    | '/staff/dashboard'
+    | '/staff/examiner'
+    | '/staff/finance'
+    | '/staff/fleet'
+    | '/staff/instructor'
+    | '/staff/students'
+    | '/superadmin/dashboard'
+    | '/superadmin/users'
+    | '/staff'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/login'
     | '/register'
+    | '/_authenticated/book'
     | '/_authenticated/dashboard'
+    | '/_authenticated/documents'
+    | '/_authenticated/notifications'
+    | '/_authenticated/payments'
+    | '/_authenticated/profile'
+    | '/_authenticated/schedule'
+    | '/_authenticated/theory'
     | '/courses/$courseId'
+    | '/_authenticated/staff/dashboard'
+    | '/_authenticated/staff/examiner'
+    | '/_authenticated/staff/finance'
+    | '/_authenticated/staff/fleet'
+    | '/_authenticated/staff/instructor'
+    | '/_authenticated/staff/students'
+    | '/_authenticated/superadmin/dashboard'
+    | '/_authenticated/superadmin/users'
+    | '/_authenticated/staff/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -129,6 +339,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoursesCourseIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/theory': {
+      id: '/_authenticated/theory'
+      path: '/theory'
+      fullPath: '/theory'
+      preLoaderRoute: typeof AuthenticatedTheoryRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/schedule': {
+      id: '/_authenticated/schedule'
+      path: '/schedule'
+      fullPath: '/schedule'
+      preLoaderRoute: typeof AuthenticatedScheduleRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/payments': {
+      id: '/_authenticated/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof AuthenticatedPaymentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/notifications': {
+      id: '/_authenticated/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/documents': {
+      id: '/_authenticated/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof AuthenticatedDocumentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -136,15 +388,117 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/book': {
+      id: '/_authenticated/book'
+      path: '/book'
+      fullPath: '/book'
+      preLoaderRoute: typeof AuthenticatedBookRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/staff/': {
+      id: '/_authenticated/staff/'
+      path: '/staff'
+      fullPath: '/staff/'
+      preLoaderRoute: typeof AuthenticatedStaffIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/superadmin/users': {
+      id: '/_authenticated/superadmin/users'
+      path: '/superadmin/users'
+      fullPath: '/superadmin/users'
+      preLoaderRoute: typeof AuthenticatedSuperadminUsersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/superadmin/dashboard': {
+      id: '/_authenticated/superadmin/dashboard'
+      path: '/superadmin/dashboard'
+      fullPath: '/superadmin/dashboard'
+      preLoaderRoute: typeof AuthenticatedSuperadminDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/staff/students': {
+      id: '/_authenticated/staff/students'
+      path: '/staff/students'
+      fullPath: '/staff/students'
+      preLoaderRoute: typeof AuthenticatedStaffStudentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/staff/instructor': {
+      id: '/_authenticated/staff/instructor'
+      path: '/staff/instructor'
+      fullPath: '/staff/instructor'
+      preLoaderRoute: typeof AuthenticatedStaffInstructorRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/staff/fleet': {
+      id: '/_authenticated/staff/fleet'
+      path: '/staff/fleet'
+      fullPath: '/staff/fleet'
+      preLoaderRoute: typeof AuthenticatedStaffFleetRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/staff/finance': {
+      id: '/_authenticated/staff/finance'
+      path: '/staff/finance'
+      fullPath: '/staff/finance'
+      preLoaderRoute: typeof AuthenticatedStaffFinanceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/staff/examiner': {
+      id: '/_authenticated/staff/examiner'
+      path: '/staff/examiner'
+      fullPath: '/staff/examiner'
+      preLoaderRoute: typeof AuthenticatedStaffExaminerRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/staff/dashboard': {
+      id: '/_authenticated/staff/dashboard'
+      path: '/staff/dashboard'
+      fullPath: '/staff/dashboard'
+      preLoaderRoute: typeof AuthenticatedStaffDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedBookRoute: typeof AuthenticatedBookRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
+  AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
+  AuthenticatedPaymentsRoute: typeof AuthenticatedPaymentsRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
+  AuthenticatedTheoryRoute: typeof AuthenticatedTheoryRoute
+  AuthenticatedStaffDashboardRoute: typeof AuthenticatedStaffDashboardRoute
+  AuthenticatedStaffExaminerRoute: typeof AuthenticatedStaffExaminerRoute
+  AuthenticatedStaffFinanceRoute: typeof AuthenticatedStaffFinanceRoute
+  AuthenticatedStaffFleetRoute: typeof AuthenticatedStaffFleetRoute
+  AuthenticatedStaffInstructorRoute: typeof AuthenticatedStaffInstructorRoute
+  AuthenticatedStaffStudentsRoute: typeof AuthenticatedStaffStudentsRoute
+  AuthenticatedSuperadminDashboardRoute: typeof AuthenticatedSuperadminDashboardRoute
+  AuthenticatedSuperadminUsersRoute: typeof AuthenticatedSuperadminUsersRoute
+  AuthenticatedStaffIndexRoute: typeof AuthenticatedStaffIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedBookRoute: AuthenticatedBookRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
+  AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
+  AuthenticatedPaymentsRoute: AuthenticatedPaymentsRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,
+  AuthenticatedTheoryRoute: AuthenticatedTheoryRoute,
+  AuthenticatedStaffDashboardRoute: AuthenticatedStaffDashboardRoute,
+  AuthenticatedStaffExaminerRoute: AuthenticatedStaffExaminerRoute,
+  AuthenticatedStaffFinanceRoute: AuthenticatedStaffFinanceRoute,
+  AuthenticatedStaffFleetRoute: AuthenticatedStaffFleetRoute,
+  AuthenticatedStaffInstructorRoute: AuthenticatedStaffInstructorRoute,
+  AuthenticatedStaffStudentsRoute: AuthenticatedStaffStudentsRoute,
+  AuthenticatedSuperadminDashboardRoute: AuthenticatedSuperadminDashboardRoute,
+  AuthenticatedSuperadminUsersRoute: AuthenticatedSuperadminUsersRoute,
+  AuthenticatedStaffIndexRoute: AuthenticatedStaffIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -161,3 +515,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Calendar, CheckCircle2, BookOpen, AlertCircle, ArrowRight, Clock, MapPin } from "lucide-react";
 import { KpiCard } from "@/components/site/KpiCard";
 import { ProgressRing } from "@/components/site/ProgressRing";
@@ -121,9 +121,9 @@ function DashboardPage() {
           <div className="rounded-2xl border border-border bg-white p-6 shadow-xs">
             <h2 className="text-h3 text-navy">Quick actions</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <ActionCard icon={Calendar} title="Book next lesson" tone="info" />
-              <ActionCard icon={AlertCircle} title="Pay balance" tone="brand" />
-              <ActionCard icon={BookOpen} title="Take theory quiz" tone="purple" />
+              <ActionCard icon={Calendar} title="Book next lesson" tone="info" to="/book" />
+              <ActionCard icon={AlertCircle} title="Pay balance" tone="brand" to="/payments" />
+              <ActionCard icon={BookOpen} title="Take theory quiz" tone="purple" to="/theory" />
             </div>
           </div>
         </div>
@@ -132,13 +132,13 @@ function DashboardPage() {
   );
 }
 
-function ActionCard({ icon: Icon, title, tone }: { icon: any; title: string; tone: "info" | "brand" | "purple" }) {
+function ActionCard({ icon: Icon, title, tone, to }: { icon: any; title: string; tone: "info" | "brand" | "purple"; to: string }) {
   const toneCls = { info: "bg-info-light text-info", brand: "bg-brand-light text-brand", purple: "bg-purple-light text-purple" }[tone];
   return (
-    <button className="group flex items-center gap-3 rounded-xl border border-border bg-white p-4 text-left transition-all hover:border-brand-blue hover:shadow-md">
+    <Link to={to as any} className="group flex items-center gap-3 rounded-xl border border-border bg-white p-4 text-left transition-all hover:border-brand-blue hover:shadow-md">
       <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${toneCls}`}><Icon className="h-5 w-5" /></div>
       <span className="flex-1 text-sm font-medium">{title}</span>
       <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-    </button>
+    </Link>
   );
 }

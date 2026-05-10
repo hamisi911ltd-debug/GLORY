@@ -16,9 +16,20 @@ dist-ssr
 .nitro
 *.local
 
+# Vercel build outputs — generated fresh on each deploy
+public/
+api/dist/
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
+
+# Environment secrets — never commit these
+.env
+.env.local
+.env.production
+backend/.env
+backend/.dev.vars
 
 # Editor directories and files
 .vscode/*
