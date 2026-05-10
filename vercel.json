@@ -4,23 +4,10 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "outputDirectory": "dist/client",
-  "builds": [
+  "rewrites": [
     {
-      "src": "api/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["dist/server/**"]
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/api/server.js"
+      "source": "/(.*)",
+      "destination": "/api/server.js"
     }
   ]
 }
