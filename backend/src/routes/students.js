@@ -5,6 +5,7 @@ import { ok, created, badRequest, notFound } from "../lib/response.js";
 export function registerStudentRoutes(router) {
   /**
    * GET /api/students/me
+   * Get current student's profile with payments and lessons
    */
   router.get("/api/students/me", async (req, env) => {
     const auth = await authenticate(req.raw, env);
@@ -16,7 +17,7 @@ export function registerStudentRoutes(router) {
         return notFound("Student record not found");
       }
 
-      // Get recent payments
+      // Get recent payments with real-time status
       const payments = await PaymentService.list(env.DB, { 
         student_id: student.id 
       });
@@ -27,10 +28,27 @@ export function registerStudentRoutes(router) {
         status: 'scheduled'
       });
 
+      // Calculate totals
+      const totalPaid = payments
+        .filter(p => p.status === 'completed')
+        .reduce((sum, p) => sum + p.amount, 0);
+
       return ok({
-        student,
-        payments: payments.slice(0, 5), // Last 5 payments
-        upcoming_lessons: lessons.slice(0, 3) // Next 3 lessons
+        student: {
+          ...student,
+          total_paid: totalPaid,
+          balance: student.balance || 0,
+          progress_percentage: student.progress_percentage || 0,
+          status: student.status
+        },
+        payments: payments.slice(0, 10),
+        upcoming_lessons: lessons.slice(0, 5),
+        summary: {
+          total_paid: totalPaid,
+          balance: student.balance,
+          lessons_completed: lessons.filter(l => l.status === 'completed').length,
+          upcoming_lessons_count: lessons.filter(l => l.status === 'scheduled').length
+        }
       });
     } catch (error) {
       console.error('Get student profile error:', error);

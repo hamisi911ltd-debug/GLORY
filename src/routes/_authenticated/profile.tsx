@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { User, Lock, Bell, Camera, Save } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { User, Lock, Bell, Camera, Save, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({ meta: [{ title: "Profile & Settings — DriveSchool Pro" }] }),
@@ -21,6 +22,9 @@ function ProfilePage() {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("personal");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [personal, setPersonal] = useState({
     firstName: "Amara",
@@ -44,6 +48,104 @@ function ProfilePage() {
 
   const togglePref = (key: keyof typeof prefs) =>
     setPrefs((p) => ({ ...p, [key]: !p[key] }));
+
+  // Load profile data including avatar
+  useEffect(() => {
+    if (!user) return;
+    const loadProfile = async () => {
+      try {
+        const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+        if (data) {
+          setPersonal({
+            firstName: data.full_name?.split(" ")[0] ?? "",
+            lastName: data.full_name?.split(" ").slice(1).join(" ") ?? "",
+            email: user.email ?? "",
+            phone: data.phone ?? "",
+            dob: data.date_of_birth ?? "",
+            nationalId: data.national_id ?? "",
+            branch: data.branch_id ?? "westlands",
+          });
+          setAvatarUrl(data.avatar_url);
+        }
+      } catch (error) {
+        console.error("Failed to load profile:", error);
+      }
+    };
+    loadProfile();
+  }, [user]);
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type and size
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setAvatarUrl(publicUrl);
+      toast.success("Profile picture updated successfully");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    if (!user) return;
+
+    try {
+      // Remove from storage
+      const { error: storageError } = await supabase.storage
+        .from('avatars')
+        .remove([`${user.id}/avatar.jpg`, `${user.id}/avatar.png`, `${user.id}/avatar.jpeg`]);
+
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('id', user.id);
+
+      if (storageError || updateError) throw new Error("Failed to remove avatar");
+
+      setAvatarUrl(null);
+      toast.success("Profile picture removed");
+    } catch (error) {
+      console.error("Remove avatar error:", error);
+      toast.error("Failed to remove profile picture");
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -96,17 +198,69 @@ function ProfilePage() {
       {/* Avatar */}
       <div className="mt-8 flex items-center gap-5">
         <div className="relative">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-blue text-2xl font-bold text-white">
-            {personal.firstName[0]}{personal.lastName[0]}
-          </div>
-          <button className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white border border-border shadow-sm hover:bg-surface-2 transition-colors">
-            <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt="Profile"
+              className="h-20 w-20 rounded-full object-cover border-2 border-border"
+            />
+          ) : (
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-blue text-2xl font-bold text-white">
+              {personal.firstName[0]}{personal.lastName[0]}
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarUpload}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white border border-border shadow-sm hover:bg-surface-2 transition-colors disabled:opacity-50"
+          >
+            {uploading ? (
+              <div className="h-3 w-3 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+            ) : (
+              <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
           </button>
+          {avatarUrl && (
+            <button
+              onClick={removeAvatar}
+              className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white hover:bg-danger/80 transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
         </div>
         <div>
           <p className="font-semibold text-navy text-lg">{personal.firstName} {personal.lastName}</p>
           <p className="text-sm text-muted-foreground">{personal.email}</p>
           <Badge variant="info" size="sm" className="mt-1">Student · {BRANCHES.find(b => b.id === personal.branch)?.name}</Badge>
+          <div className="mt-2 flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              <Upload className="mr-1 h-3 w-3" />
+              {uploading ? "Uploading..." : "Change Photo"}
+            </Button>
+            {avatarUrl && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={removeAvatar}
+              >
+                <X className="mr-1 h-3 w-3" />
+                Remove
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

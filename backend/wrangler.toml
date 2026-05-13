@@ -15,8 +15,72 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 # Non-secret config vars (safe to commit)
 ENVIRONMENT = "production"
+API_BASE_URL = "https://api.driveschool.app"
+FRONTEND_URL = "https://driveschool.app"
 
+# Cloudflare D1 Database binding
 [[d1_databases]]
 binding = "DB"
 database_name = "driveschool-pro"
 database_id = "your-database-id-here"
+preview_database_id = "your-preview-database-id-here"
+
+# Cloudflare R2 Storage buckets for avatars and documents
+[[r2_buckets]]
+binding = "AVATARS"
+bucket_name = "driveschool-avatars"
+preview_bucket_name = "driveschool-avatars-preview"
+
+[[r2_buckets]]
+binding = "DOCUMENTS"
+bucket_name = "driveschool-documents"
+preview_bucket_name = "driveschool-documents-preview"
+
+# Cloudflare Analytics Engine for real-time analytics
+[analytics_engine_datasets]
+
+# Rate limiting via Durable Objects
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
+script_name = "driveschool-pro-api"
+
+# Service bindings for inter-worker communication
+[[services]]
+binding = "AUTH_SERVICE"
+service = "driveschool-auth"
+environment = "production"
+
+# Queue for background jobs (payments, notifications, etc)
+[[queues.producers]]
+binding = "PAYMENT_QUEUE"
+queue = "driveschool-payments"
+
+[[queues.consumers]]
+queue = "driveschool-payments"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "driveschool-payments-failed"
+
+[[queues.producers]]
+binding = "NOTIFICATION_QUEUE"
+queue = "driveschool-notifications"
+
+[[queues.consumers]]
+queue = "driveschool-notifications"
+max_batch_size = 5
+max_batch_timeout = 10
+max_retries = 2
+
+# Environment-specific overrides
+[env.staging]
+vars = { ENVIRONMENT = "staging", API_BASE_URL = "https://staging-api.driveschool.app" }
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "driveschool-pro-staging"
+database_id = "your-staging-database-id"
+
+[env.development]
+vars = { ENVIRONMENT = "development", API_BASE_URL = "http://localhost:8787" }

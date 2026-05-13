@@ -23,17 +23,20 @@ export function registerProfileRoutes(router) {
 
   /**
    * PATCH /api/profile
+   * Updates profile including avatar_url (can be set from Supabase storage)
    */
   router.patch("/api/profile", async (req, env) => {
     const auth = await authenticate(req.raw, env);
     if (auth.error) return auth.error;
 
-    const { full_name, phone, branch_id, avatar_url } = req.body ?? {};
+    const { full_name, phone, branch_id, avatar_url, date_of_birth, national_id } = req.body ?? {};
     const updates = { updated_at: new Date().toISOString() };
-    if (full_name  !== undefined) updates.full_name  = full_name;
-    if (phone      !== undefined) updates.phone      = phone;
-    if (branch_id  !== undefined) updates.branch_id  = branch_id;
+    if (full_name !== undefined) updates.full_name = full_name;
+    if (phone !== undefined) updates.phone = phone;
+    if (branch_id !== undefined) updates.branch_id = branch_id;
     if (avatar_url !== undefined) updates.avatar_url = avatar_url;
+    if (date_of_birth !== undefined) updates.date_of_birth = date_of_birth;
+    if (national_id !== undefined) updates.national_id = national_id;
 
     const admin = getAdminClient(env);
     const { data, error } = await admin
@@ -44,6 +47,14 @@ export function registerProfileRoutes(router) {
       .single();
 
     if (error) return badRequest(error.message);
+    
+    // Broadcast real-time update
+    await admin
+      .from("profiles")
+      .on("*", { event: "UPDATE", schema: "public", table: "profiles" })
+      .eq("id", auth.user.id)
+      .subscribe();
+
     return ok({ profile: data });
   });
 

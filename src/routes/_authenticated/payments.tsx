@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CreditCard, Smartphone, Download, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/_authenticated/payments")({
   head: () => ({ meta: [{ title: "Payments & Invoices — DriveSchool Pro" }] }),
@@ -104,10 +106,77 @@ function MpesaModal({ onClose }: { onClose: () => void }) {
 }
 
 function PaymentsPage() {
+  const { user } = useAuth();
   const [modal, setModal] = useState<PayModal>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [balance, setBalance] = useState(3500);
+  const [loading, setLoading] = useState(true);
 
-  const totalPaid = payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0);
-  const outstanding = 3500;
+  // Load payments and balance with real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    const loadPayments = async () => {
+      try {
+        // Get student record first
+        const { data: student } = await supabase
+          .from("students")
+          .select("id, total_paid, balance")
+          .eq("user_id", user.id)
+          .single();
+
+        if (student) {
+          setBalance(student.balance);
+
+          // Get payments
+          const { data: paymentData } = await supabase
+            .from("payments")
+            .select("*")
+            .eq("student_id", student.id)
+            .order("created_at", { ascending: false });
+
+          if (paymentData) {
+            const formattedPayments = paymentData.map(p => ({
+              id: p.id,
+              date: new Date(p.created_at).toLocaleDateString("en-GB"),
+              description: p.description,
+              amount: p.amount,
+              method: p.payment_method as PayMethod,
+              status: p.status as PayStatus,
+              ref: p.payment_reference || "—",
+            }));
+            setPayments(formattedPayments);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load payments:", error);
+        toast.error("Failed to load payment data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPayments();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel(`payments_${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, (payload) => {
+        // Reload payments when changes occur
+        loadPayments();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "students" }, (payload) => {
+        // Update balance when student record changes
+        if (payload.new && payload.new.user_id === user.id) {
+          setBalance(payload.new.balance);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-10">
@@ -116,6 +185,13 @@ function PaymentsPage() {
 
       {/* Balance card */}
       <div className="mt-8 rounded-2xl bg-brand p-6 text-white">
+        <p className="text-sm opacity-90">Amount due</p>
+        <p className="mt-2 text-4xl font-bold">KES {balance.toLocaleString()}</p>
+        <p className="mt-1 text-sm opacity-75">{payments.filter(p => p.status === "paid").length} payments received</p>
+        <Button variant="hero" size="lg" className="mt-5 bg-white text-brand hover:bg-white/90" onClick={() => setModal("mpesa")}>
+          <Smartphone className="mr-1.5 h-4 w-4" /> Pay now
+        </Button>
+      </div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-label-sm text-white/70">Outstanding balance</p>
