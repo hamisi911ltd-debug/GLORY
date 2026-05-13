@@ -6,11 +6,17 @@ compatibility_flags = ["nodejs_compat"]
 # Secrets are set via: wrangler secret put SECRET_NAME
 # Never put real values here — this file is committed to git.
 # Required secrets:
-#   SUPABASE_URL
-#   SUPABASE_SERVICE_ROLE_KEY
-#   SUPABASE_ANON_KEY
+#   JWT_SECRET (for authentication)
 #   FRONTEND_URL
+#   MPESA_CONSUMER_KEY
+#   MPESA_CONSUMER_SECRET
+#   MPESA_PASSKEY
 
 [vars]
 # Non-secret config vars (safe to commit)
 ENVIRONMENT = "production"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "driveschool-pro"
+database_id = "your-database-id-here"

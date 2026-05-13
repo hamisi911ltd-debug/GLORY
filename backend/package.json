@@ -6,13 +6,17 @@
   "scripts": {
     "dev": "wrangler dev --config wrangler.toml",
     "deploy": "wrangler deploy --config wrangler.toml",
-    "cf-typegen": "wrangler types --config wrangler.toml"
+    "cf-typegen": "wrangler types --config wrangler.toml",
+    "db:init": "wrangler d1 execute driveschool-pro --file=./schema.sql",
+    "db:migrate": "wrangler d1 migrations apply driveschool-pro"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250525.0",
     "wrangler": "^3.114.4"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.105.4"
+    "@tuxcode/cloudflare-worker-jwt": "^2.0.0",
+    "bcryptjs": "^2.4.3",
+    "nanoid": "^5.0.0"
   }
 }
