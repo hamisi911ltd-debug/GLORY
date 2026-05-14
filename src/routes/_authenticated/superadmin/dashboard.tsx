@@ -80,13 +80,60 @@ function SuperAdminDashboard() {
           <div className="mt-6 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={revenueData} margin={{ right: 8 }}>
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v: number) => [`KES ${v.toLocaleString()}`, ""]} />
-                <Legend />
-                <Line type="monotone" dataKey="westlands" name="Westlands" stroke="var(--color-brand)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="karen" name="Karen" stroke="var(--color-info)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="mombasa" name="Mombasa Rd" stroke="var(--color-success)" strokeWidth={2} dot={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#6b7280" />
+                <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} stroke="#6b7280" />
+                <Tooltip 
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="rounded-xl border border-border bg-white p-3 shadow-lg min-w-[150px]">
+                          <p className="text-xs font-bold text-navy mb-2">{label} Revenue</p>
+                          {payload.map((entry: any) => (
+                            <div key={entry.name} className="flex items-center justify-between gap-4 py-0.5">
+                              <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.stroke }} />
+                                <span className="text-[11px] text-muted-foreground">{entry.name}:</span>
+                              </div>
+                              <span className="text-xs font-bold text-navy">KES {entry.value.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
+                <Line 
+                  type="monotone" 
+                  dataKey="westlands" 
+                  name="Westlands" 
+                  stroke="var(--color-brand)" 
+                  strokeWidth={3} 
+                  dot={{ r: 0 }} 
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  animationDuration={1500}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="karen" 
+                  name="Karen" 
+                  stroke="var(--color-info)" 
+                  strokeWidth={3} 
+                  dot={{ r: 0 }} 
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  animationDuration={1800}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="mombasa" 
+                  name="Mombasa Rd" 
+                  stroke="var(--color-success)" 
+                  strokeWidth={3} 
+                  dot={{ r: 0 }} 
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  animationDuration={2100}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>

@@ -156,12 +156,49 @@ function DashboardPage() {
               <XAxis dataKey="week" stroke="#6b7280" />
               <YAxis stroke="#6b7280" />
               <Tooltip 
-                contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }}
-                formatter={(value, name) => [`${value} lessons`, name === 'completed' ? 'Completed' : name === 'target' ? 'Target' : 'Pending']}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="rounded-xl border border-border bg-white p-3 shadow-lg">
+                        <p className="text-xs font-bold text-navy mb-2">{label}</p>
+                        {payload.map((entry: any) => (
+                          <div key={entry.name} className="flex items-center justify-between gap-4 py-0.5">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                              <span className="text-[11px] text-muted-foreground">{entry.name}:</span>
+                            </div>
+                            <span className="text-xs font-bold text-navy">{entry.value} lessons</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
               />
-              <Legend />
-              <Area type="monotone" dataKey="target" stroke="#6366f1" fillOpacity={1} fill="url(#targetGradient)" name="Target" />
-              <Area type="monotone" dataKey="completed" stroke="#10b981" fillOpacity={1} fill="url(#completedGradient)" name="Completed" />
+              <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
+              <Area 
+                type="monotone" 
+                dataKey="target" 
+                stroke="#6366f1" 
+                strokeWidth={3}
+                fillOpacity={1} 
+                fill="url(#targetGradient)" 
+                name="Target" 
+                animationDuration={1500}
+                activeDot={{ r: 6, strokeWidth: 0 }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="completed" 
+                stroke="#10b981" 
+                strokeWidth={3}
+                fillOpacity={1} 
+                fill="url(#completedGradient)" 
+                name="Completed" 
+                animationDuration={1500}
+                activeDot={{ r: 6, strokeWidth: 0 }}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -179,16 +216,30 @@ function DashboardPage() {
                   data={paymentData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={2}
+                  innerRadius={65}
+                  outerRadius={85}
+                  paddingAngle={5}
                   dataKey="value"
+                  animationBegin={200}
+                  animationDuration={1200}
                 >
                   {paymentData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                    <Cell key={`cell-${index}`} fill={entry.fill} stroke="transparent" />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`KES ${value}`, ""]} />
+                <Tooltip 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="rounded-lg border border-border bg-white p-2 shadow-md">
+                          <p className="text-xs font-bold text-navy">KES {payload[0].value.toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">{payload[0].name}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
               </RechartsPieChart>
             </ResponsiveContainer>
             <div className="space-y-3">
@@ -228,10 +279,26 @@ function DashboardPage() {
               <XAxis type="number" domain={[0, 100]} stroke="#6b7280" />
               <YAxis dataKey="subject" type="category" width={80} stroke="#6b7280" />
               <Tooltip 
-                formatter={(value) => [`${value}%`, "Score"]}
-                contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }}
+                cursor={{ fill: 'rgba(0,0,0,0.03)' }}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="rounded-lg border border-border bg-white p-2 shadow-md">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase">{label}</p>
+                        <p className="text-sm font-bold text-navy">{payload[0].value}%</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
               />
-              <Bar dataKey="score" fill="#10b981" radius={[0, 4, 4, 0]} />
+              <Bar 
+                dataKey="score" 
+                fill="#10b981" 
+                radius={[0, 4, 4, 0]} 
+                animationDuration={1500}
+                animationEasing="ease-out"
+              />
             </RechartsBarChart>
           </ResponsiveContainer>
         </div>
@@ -248,12 +315,37 @@ function DashboardPage() {
               <XAxis dataKey="day" stroke="#6b7280" />
               <YAxis stroke="#6b7280" />
               <Tooltip 
-                contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }}
+                cursor={{ fill: 'rgba(0,0,0,0.03)' }}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="rounded-xl border border-border bg-white p-3 shadow-lg min-w-[120px]">
+                        <p className="text-xs font-bold text-navy mb-2">{label}</p>
+                        {payload.map((entry: any) => (
+                          <div key={entry.name} className="flex items-center justify-between gap-4 py-0.5">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                              <span className="text-[11px] text-muted-foreground">{entry.name}:</span>
+                            </div>
+                            <span className="text-xs font-bold text-navy">{entry.value}</span>
+                          </div>
+                        ))}
+                        <div className="mt-2 pt-1 border-t border-border flex justify-between">
+                          <span className="text-[11px] font-medium text-navy">Total:</span>
+                          <span className="text-xs font-bold text-navy">
+                            {payload.reduce((sum: number, entry: any) => sum + entry.value, 0)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
               />
-              <Legend />
-              <Bar dataKey="lessons" stackId="a" fill="#3b82f6" name="Lessons" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="theory" stackId="a" fill="#10b981" name="Theory" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="practice" stackId="a" fill="#f59e0b" name="Practice" radius={[4, 4, 0, 0]} />
+              <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
+              <Bar dataKey="lessons" stackId="a" fill="#3b82f6" name="Lessons" radius={[0, 0, 0, 0]} animationDuration={1000} />
+              <Bar dataKey="theory" stackId="a" fill="#10b981" name="Theory" radius={[0, 0, 0, 0]} animationDuration={1200} />
+              <Bar dataKey="practice" stackId="a" fill="#f59e0b" name="Practice" radius={[4, 4, 0, 0]} animationDuration={1400} />
             </RechartsBarChart>
           </ResponsiveContainer>
         </div>

@@ -124,8 +124,27 @@ function BranchAdminDashboard() {
             <BarChart data={utilizationData} layout="vertical" margin={{ left: 8, right: 24 }}>
               <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 12 }} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={72} />
-              <Tooltip formatter={(v) => [`${v}%`, "Utilisation"]} />
-              <Bar dataKey="used" fill="var(--color-brand)" radius={[0, 4, 4, 0]} />
+              <Tooltip 
+                cursor={{ fill: 'rgba(0,0,0,0.03)' }}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="rounded-lg border border-border bg-white p-2 shadow-md">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase">{label}</p>
+                        <p className="text-sm font-bold text-navy">{payload[0].value}% Utilisation</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Bar 
+                dataKey="used" 
+                fill="var(--color-brand)" 
+                radius={[0, 4, 4, 0]} 
+                animationDuration={1500}
+                animationEasing="ease-out"
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
