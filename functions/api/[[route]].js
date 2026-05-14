@@ -1,12 +1,41 @@
 /**
- * Cloudflare Pages Function - API Handler
- * Handles all /api/* requests
+ * Cloudflare Pages Function - Catch-all API Handler
+ * Robust JavaScript implementation that integrates all sub-routes.
  */
 
-function corsHeaders(requestOrigin) {
-  const origin = requestOrigin?.startsWith("http://localhost") || requestOrigin?.includes("immacurate.co.ke") 
+import { Router } from "./lib/router.js";
+import { registerAuthRoutes } from "./routes/auth.js";
+import { registerProfileRoutes } from "./routes/profile.js";
+import { registerStudentRoutes } from "./routes/students.js";
+import { registerLessonRoutes } from "./routes/lessons.js";
+import { registerPaymentRoutes } from "./routes/payments.js";
+import { registerNotificationRoutes } from "./routes/notifications.js";
+import { registerStaffRoutes } from "./routes/staff.js";
+import { registerCourseRoutes } from "./routes/courses.js";
+import { registerTestRoutes } from "./routes/tests.js";
+import { registerMessageRoutes } from "./routes/messages.js";
+import { registerReportRoutes } from "./routes/reports.js";
+
+const router = new Router();
+
+// Register all API sub-modules
+registerAuthRoutes(router);
+registerProfileRoutes(router);
+registerStudentRoutes(router);
+registerLessonRoutes(router);
+registerPaymentRoutes(router);
+registerNotificationRoutes(router);
+registerStaffRoutes(router);
+registerCourseRoutes(router);
+registerTestRoutes(router);
+registerMessageRoutes(router);
+registerReportRoutes(router);
+
+function corsHeaders(env, requestOrigin) {
+  const allowed = env.FRONTEND_URL ?? "https://immacurate.co.ke";
+  const origin = requestOrigin === allowed || requestOrigin?.startsWith("http://localhost") 
     ? requestOrigin 
-    : "https://immacurate.co.ke";
+    : allowed;
 
   return {
     "Access-Control-Allow-Origin": origin,
@@ -17,119 +46,76 @@ function corsHeaders(requestOrigin) {
   };
 }
 
-function jsonResponse(data, status = 200, requestOrigin = null) {
-  const headers = {
-    "Content-Type": "application/json",
-  };
-
-  if (requestOrigin) {
-    Object.assign(headers, corsHeaders(requestOrigin));
-  }
-
-  return new Response(JSON.stringify(data), {
-    status,
-    headers,
-  });
-}
-
 export async function onRequest(context) {
   const { request, env } = context;
-  const requestOrigin = request.headers.get("Origin");
   const url = new URL(request.url);
+  const requestOrigin = request.headers.get("Origin");
 
+  // Log incoming requests
   console.log(`[API] ${request.method} ${url.pathname}`);
 
+  // Handle OPTIONS for CORS preflight
+  if (request.method === "OPTIONS") {
+    return new Response(null, { 
+      status: 204, 
+      headers: corsHeaders(env, requestOrigin) 
+    });
+  }
+
+  // Health check
+  if (url.pathname === "/api/health" || url.pathname === "/api/health/") {
+    const data = { 
+      status: "ok", 
+      service: "DriveSchool Pro API",
+      timestamp: new Date().toISOString(),
+      database: env.DB ? "D1 Connected" : "Missing DB Binding"
+    };
+    
+    const headers = { "Content-Type": "application/json" };
+    Object.assign(headers, corsHeaders(env, requestOrigin));
+    
+    return new Response(JSON.stringify(data), { status: 200, headers });
+  }
+
   try {
-    // Handle OPTIONS for CORS preflight
-    if (request.method === "OPTIONS") {
-      return new Response(null, { 
-        status: 204, 
-        headers: corsHeaders(requestOrigin) 
+    // Check if DB is available
+    if (!env.DB) {
+      const errorData = { 
+        error: "Database configuration error",
+        message: "D1 database binding 'DB' not found in environment."
+      };
+      return new Response(JSON.stringify(errorData), { 
+        status: 503, 
+        headers: { "Content-Type": "application/json", ...corsHeaders(env, requestOrigin) } 
       });
     }
 
-    // Health check
-    if (url.pathname === "/api/health" || url.pathname === "/api/health/") {
-      return jsonResponse({ 
-        status: "ok", 
-        service: "DriveSchool Pro API",
-        timestamp: new Date().toISOString(),
-        database: env.DB ? "D1 Connected" : "No DB binding - Configure in Cloudflare Pages Settings",
-        path: url.pathname,
-        method: request.method
-      }, 200, requestOrigin);
-    }
-
-    // Check if DB is available
-    if (!env.DB) {
-      console.error('[API] No DB binding found');
-      return jsonResponse({ 
-        error: "Database not configured",
-        message: "Please add D1 database binding named 'DB' in Cloudflare Pages settings",
-        instructions: "Go to Pages Settings > Functions > D1 database bindings"
-      }, 503, requestOrigin);
-    }
-
-    // Simple login handler
-    if (url.pathname === "/api/login" || url.pathname === "/api/auth/login") {
-      if (request.method !== "POST") {
-        return jsonResponse({ error: "Method not allowed" }, 405, requestOrigin);
-      }
-
-      try {
-        const body = await request.json();
-        const { email, password } = body;
-
-        if (!email || !password) {
-          return jsonResponse({ 
-            error: "Email and password are required" 
-          }, 400, requestOrigin);
-        }
-
-        // Query database for user
-        const user = await env.DB.prepare(
-          'SELECT * FROM users WHERE email = ?'
-        ).bind(email).first();
-
-        if (!user) {
-          return jsonResponse({ 
-            error: "Invalid email or password" 
-          }, 401, requestOrigin);
-        }
-
-        // For now, return success (password verification will be added)
-        return jsonResponse({
-          message: "Login successful",
-          user: {
-            id: user.id,
-            email: user.email,
-            full_name: user.full_name
-          },
-          roles: ["student"],
-          token: "temp-token-" + Date.now()
-        }, 200, requestOrigin);
-
-      } catch (error) {
-        console.error('[API] Login error:', error);
-        return jsonResponse({ 
-          error: "Login failed",
-          message: error.message 
-        }, 500, requestOrigin);
-      }
-    }
-
-    // Default response for unhandled routes
-    return jsonResponse({ 
-      error: "Not found",
-      message: `Route ${url.pathname} not implemented yet`,
-      availableRoutes: ["/api/health", "/api/login", "/api/auth/login"]
-    }, 404, requestOrigin);
+    // Handle the request using the router
+    const response = await router.handle(request, env, context);
     
+    // Add CORS headers to the response
+    const headers = new Headers(response.headers);
+    const cors = corsHeaders(env, requestOrigin);
+    Object.entries(cors).forEach(([key, value]) => headers.set(key, value));
+    
+    // Create a new response with the same body but updated headers
+    return new Response(response.status === 204 ? null : response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
+
   } catch (error) {
-    console.error('[API] Unexpected error:', error);
-    return jsonResponse({ 
+    console.error(`[API Error] ${url.pathname}:`, error);
+    
+    const errorData = { 
       error: "Internal server error",
-      message: error.message || "Unknown error"
-    }, 500, requestOrigin);
+      message: error.message || "An unexpected error occurred"
+    };
+    
+    return new Response(JSON.stringify(errorData), { 
+      status: 500, 
+      headers: { "Content-Type": "application/json", ...corsHeaders(env, requestOrigin) } 
+    });
   }
 }
