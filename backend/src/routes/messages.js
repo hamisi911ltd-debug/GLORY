@@ -16,8 +16,8 @@ export function registerMessageRoutes(router) {
       
       let query = `
         SELECT m.*, 
-               sender.full_name as sender_name,
-               recipient.full_name as recipient_name
+               sender.full_name as sender_name, sender.email as sender_email,
+               recipient.full_name as recipient_name, recipient.email as recipient_email
         FROM messages m
         LEFT JOIN users sender ON m.sender_id = sender.id
         LEFT JOIN users recipient ON m.recipient_id = recipient.id

@@ -221,13 +221,17 @@ export const StudentService = {
     const student = await this.findById(db, studentId);
     if (!student) throw new DatabaseError('Student not found');
 
-    const newBalance = operation === 'add' 
-      ? parseFloat(student.balance) + parseFloat(amount)
-      : parseFloat(student.balance) - parseFloat(amount);
-
-    const newTotalPaid = operation === 'subtract'
-      ? parseFloat(student.total_paid) + parseFloat(amount)
-      : parseFloat(student.total_paid);
+    let newBalance, newTotalPaid;
+    
+    if (operation === 'subtract') {
+      // Payment received - reduce balance, increase total paid
+      newBalance = Math.max(0, parseFloat(student.balance || 0) - parseFloat(amount));
+      newTotalPaid = parseFloat(student.total_paid || 0) + parseFloat(amount);
+    } else {
+      // Add to balance (e.g., additional fees)
+      newBalance = parseFloat(student.balance || 0) + parseFloat(amount);
+      newTotalPaid = parseFloat(student.total_paid || 0);
+    }
 
     const query = `UPDATE students SET balance = ?, total_paid = ? WHERE id = ?`;
     return await executeUpdate(db, query, [newBalance, newTotalPaid, studentId]);

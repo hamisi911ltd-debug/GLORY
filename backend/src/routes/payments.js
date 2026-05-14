@@ -174,14 +174,17 @@ export function registerPaymentRoutes(router) {
 
       const payment = await PaymentService.create(env.DB, paymentData);
 
-      // Update payment status (this will also update student balance)
+      // Update student balance (this will also update student balance)
       await PaymentService.updateStatus(env.DB, payment.id, 'completed');
 
+      // Get updated student data to show correct balance
+      const updatedStudent = await StudentService.findById(env.DB, payment.student_id);
+      
       // Create notification for student
       await NotificationService.create(env.DB, {
-        user_id: student.user_id,
+        user_id: updatedStudent.user_id,
         title: "Payment Received",
-        message: `Cash payment of KES ${amount} has been recorded. Your balance has been updated.`,
+        message: `Cash payment of KES ${amount} has been recorded. Your remaining balance is KES ${updatedStudent.balance}.`,
         type: "success",
         action_url: `/payments`
       });
