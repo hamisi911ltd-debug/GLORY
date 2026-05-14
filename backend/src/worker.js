@@ -1,6 +1,7 @@
 /**
  * DriveSchool Pro — Production Cloudflare Worker API
  * Fully integrated with D1 database
+ * Last updated: 2026-05-14
  */
 
 import { Router } from "./lib/router.js";
