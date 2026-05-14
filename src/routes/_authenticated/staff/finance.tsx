@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated/staff/finance")({
   head: () => ({ meta: [{ title: "Finance Dashboard — DriveSchool Pro" }] }),
@@ -58,42 +58,41 @@ function FinanceDashboard() {
     try {
       setLoading(true);
       // Fetch payments
-      const { data: payData } = await supabase
-        .from("payments")
-        .select("*, students(id, profiles(full_name))")
-        .order("created_at", { ascending: false });
+      const { data: payData, error: payError } = await api.get<{ payments: any[] }>("/payments");
 
-      if (payData) {
-        setPayments(payData.map((p: any) => ({
+      if (payData && payData.payments) {
+        setPayments(payData.payments.map((p: any) => ({
           id: p.id,
-          student: p.students?.profiles?.full_name || "Unknown",
+          student: p.student_full_name || p.full_name || "Unknown",
           student_id: p.student_id,
-          date: new Date(p.created_at).toLocaleDateString("en-GB"),
+          date: new Date(p.created_at || p.payment_date).toLocaleDateString("en-GB"),
           amount: p.amount,
           method: p.payment_method as PayMethod,
           status: (p.status === "completed" ? "paid" : p.status) as PayStatus,
           ref: p.payment_reference || "—",
           description: p.description
         })));
+      } else if (payError) {
+        console.error("Fetch payments error:", payError);
       }
 
       // Fetch students for balances
-      const { data: stuData } = await supabase
-        .from("students")
-        .select("*, profiles(full_name, phone), courses(name, price)");
+      const { data: stuData, error: stuError } = await api.get<{ students: any[] }>("/students");
 
-      if (stuData) {
-        setBalances(stuData.map((s: any) => ({
+      if (stuData && stuData.students) {
+        setBalances(stuData.students.map((s: any) => ({
           id: s.id,
-          student: s.profiles?.full_name || "Unknown",
-          phone: s.profiles?.phone || "N/A",
-          course: s.courses?.name || "N/A",
-          totalFees: s.courses?.price || 0,
+          student: s.full_name || "Unknown",
+          phone: s.phone || "N/A",
+          course: s.course_name || "N/A",
+          totalFees: s.course_price || 0,
           amountPaid: s.total_paid || 0,
-          balance: s.balance,
+          balance: s.balance || 0,
           lastPayment: "N/A",
           daysOverdue: 0
         })));
+      } else if (stuError) {
+        console.error("Fetch students error:", stuError);
       }
     } catch (error) {
       console.error("Load data error:", error);
@@ -131,16 +130,15 @@ function FinanceDashboard() {
     }
 
     try {
-      const { error } = await supabase.from("payments").insert({
+      const { error } = await api.post("/payments/cash", {
         student_id: cashForm.student_id,
         amount: parseFloat(cashForm.amount),
         payment_method: cashForm.method,
-        status: "completed",
         description: cashForm.note,
-        payment_reference: `MAN-${Date.now()}`
+        receipt_number: `MAN-${Date.now()}`
       });
 
-      if (error) throw error;
+      if (error) throw new Error(error);
 
       toast.success("Payment recorded successfully");
       setCashModal(false);
@@ -155,17 +153,14 @@ function FinanceDashboard() {
     if (!editModal) return;
 
     try {
-      const { error } = await supabase
-        .from("payments")
-        .update({
-          amount: editModal.amount,
-          payment_method: editModal.method,
-          status: editModal.status === "paid" ? "completed" : editModal.status,
-          description: editModal.description
-        })
-        .eq("id", editModal.id);
+      const { error } = await api.put(`/payments/${editModal.id}`, {
+        amount: editModal.amount,
+        payment_method: editModal.method,
+        status: editModal.status === "paid" ? "completed" : editModal.status,
+        description: editModal.description
+      });
 
-      if (error) throw error;
+      if (error) throw new Error(error);
 
       toast.success("Payment updated");
       setEditModal(null);
@@ -179,13 +174,14 @@ function FinanceDashboard() {
     if (!confirm("Are you sure you want to delete this payment?")) return;
 
     try {
-      const { error } = await supabase.from("payments").delete().eq("id", id);
-      if (error) throw error;
+      const { error } = await api.delete(`/payments/${id}`);
+      if (error) throw new Error(error);
 
       toast.success("Payment deleted");
       loadData();
     } catch (err: any) {
       toast.error(err.message);
+    }
   };
 
   return (
