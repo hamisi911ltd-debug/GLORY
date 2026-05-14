@@ -54,18 +54,21 @@ function ProfilePage() {
     if (!user) return;
     const loadProfile = async () => {
       try {
-        const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-        if (data) {
+        const { data, error } = await api.get<{ user: any; roles: string[] }>("/auth/me");
+        if (data && data.user) {
+          const user = data.user;
           setPersonal({
-            firstName: data.full_name?.split(" ")[0] ?? "",
-            lastName: data.full_name?.split(" ").slice(1).join(" ") ?? "",
+            firstName: user.full_name?.split(" ")[0] ?? "",
+            lastName: user.full_name?.split(" ").slice(1).join(" ") ?? "",
             email: user.email ?? "",
-            phone: data.phone ?? "",
-            dob: data.date_of_birth ?? "",
-            nationalId: data.national_id ?? "",
-            branch: data.branch_id ?? "westlands",
+            phone: user.phone ?? "",
+            dob: user.date_of_birth ?? "",
+            nationalId: user.national_id ?? "",
+            branch: user.branch_id ?? "westlands",
           });
-          setAvatarUrl(data.avatar_url);
+          setAvatarUrl(user.avatar_url || null);
+        } else if (error) {
+          console.error("Failed to load profile:", error);
         }
       } catch (error) {
         console.error("Failed to load profile:", error);
@@ -126,24 +129,18 @@ function ProfilePage() {
     if (!user) return;
 
     try {
-      // Remove from storage
-      const { error: storageError } = await supabase.storage
-        .from('avatars')
-        .remove([`${user.id}/avatar.jpg`, `${user.id}/avatar.png`, `${user.id}/avatar.jpeg`]);
+      setSaving(true);
+      const { error } = await api.patch("/profile", { avatar_url: null });
 
-      // Update profile
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: null })
-        .eq('id', user.id);
-
-      if (storageError || updateError) throw new Error("Failed to remove avatar");
+      if (error) throw new Error(error);
 
       setAvatarUrl(null);
       toast.success("Profile picture removed");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Remove avatar error:", error);
-      toast.error("Failed to remove profile picture");
+      toast.error("Failed to remove profile picture: " + error.message);
+    } finally {
+      setSaving(false);
     }
   };
 

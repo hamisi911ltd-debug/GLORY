@@ -117,28 +117,18 @@ function PaymentsPage() {
   const loadPayments = async () => {
     if (!user) return;
     try {
-      // Get student record with course price
-      const { data: student } = await supabase
-        .from("students")
-        .select("id, course_id, courses(price)")
-        .eq("user_id", user.id)
-        .single();
+      setLoading(true);
+      // Fetch student data with payments from our new API
+      const { data, error } = await api.get<{ student: any; payments: any[] }>("/students/me");
 
-      if (student) {
-        const price = (student as any).courses?.price ?? 0;
-        setCoursePrice(price);
-
-        // Fetch all payments for this student
-        const { data: paymentData } = await supabase
-          .from("payments")
-          .select("*")
-          .eq("student_id", student.id)
-          .order("created_at", { ascending: false });
+      if (data) {
+        const { student, payments: paymentData } = data;
+        setCoursePrice(student.course_price ?? 0);
 
         if (paymentData) {
           const formatted: Payment[] = paymentData.map((p: any) => ({
             id: p.id,
-            date: new Date(p.created_at).toLocaleDateString("en-GB", {
+            date: new Date(p.payment_date || p.created_at).toLocaleDateString("en-GB", {
               day: "numeric",
               month: "short",
               year: "numeric",
@@ -146,18 +136,19 @@ function PaymentsPage() {
             description: p.description ?? "Payment",
             amount: p.amount,
             method: (p.payment_method ?? "cash") as PayMethod,
-            // Supabase backend uses "completed"; normalise to "paid" for UI
             status: (p.status === "completed" ? "paid" : p.status) as PayStatus,
-            ref: p.payment_reference ?? "—",
+            ref: p.mpesa_receipt_number || p.payment_reference || "—",
           }));
           setPayments(formatted);
 
-          // Only count confirmed payments toward balance calculation
           const paid = formatted
             .filter((p) => p.status === "paid")
             .reduce((acc, p) => acc + p.amount, 0);
           setTotalPaid(paid);
         }
+      } else if (error) {
+        console.error("Failed to load payments:", error);
+        toast.error(error);
       }
     } catch (error) {
       console.error("Failed to load payments:", error);
@@ -169,16 +160,6 @@ function PaymentsPage() {
 
   useEffect(() => {
     loadPayments();
-    if (!user) return;
-
-    const channel = supabase
-      .channel(`payments_${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => {
-        loadPayments();
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   if (loading) {

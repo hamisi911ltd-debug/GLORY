@@ -1,11 +1,16 @@
 import * as React from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { Session, User } from "@supabase/supabase-js";
+import { api } from "@/lib/api";
 
 type AppRole = "super_admin" | "branch_admin" | "instructor" | "finance" | "examiner" | "student";
 
+interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  phone?: string;
+}
+
 interface AuthState {
-  session: Session | null;
   user: User | null;
   roles: AppRole[];
   loading: boolean;
@@ -13,48 +18,54 @@ interface AuthState {
 }
 
 const AuthContext = React.createContext<AuthState>({
-  session: null, user: null, roles: [], loading: true, signOut: async () => {},
+  user: null, roles: [], loading: true, signOut: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = React.useState<Session | null>(null);
+  const [user, setUser] = React.useState<User | null>(null);
   const [roles, setRoles] = React.useState<AppRole[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      if (s?.user) {
-        // defer to avoid auth deadlock
-        setTimeout(() => {
-          supabase.from("user_roles").select("role").eq("user_id", s.user.id).then(({ data }) => {
-            setRoles((data ?? []).map((r) => r.role as AppRole));
-          });
-        }, 0);
-      } else {
+    // Check if user is logged in
+    const checkAuth = async () => {
+      const token = api.getAuthToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      // Verify token and get user data
+      const { data, error } = await api.get<{ user: User; roles: AppRole[] }>("/auth/me");
+      
+      if (error || !data) {
+        // Token invalid, clear it
+        api.clearAuthToken();
+        setUser(null);
         setRoles([]);
+      } else {
+        setUser(data.user);
+        setRoles(data.roles);
       }
-    });
-
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
+      
       setLoading(false);
-      if (s?.user) {
-        supabase.from("user_roles").select("role").eq("user_id", s.user.id).then(({ data }) => {
-          setRoles((data ?? []).map((r) => r.role as AppRole));
-        });
-      }
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    checkAuth();
   }, []);
 
+  const signOut = async () => {
+    await api.post("/auth/logout");
+    api.clearAuthToken();
+    setUser(null);
+    setRoles([]);
+  };
+
   const value: AuthState = {
-    session,
-    user: session?.user ?? null,
+    user,
     roles,
     loading,
-    signOut: async () => { await supabase.auth.signOut(); },
+    signOut,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

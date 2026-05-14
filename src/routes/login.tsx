@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,11 +25,26 @@ function LoginPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    const { data, error } = await api.post<{ token: string; user: any; roles: string[] }>("/auth/login", { 
+      email, 
+      password 
+    });
+    
     setLoading(false);
-    if (error) { toast.error(error.message); return; }
+    
+    if (error || !data) { 
+      toast.error(error || "Login failed"); 
+      return; 
+    }
+    
+    // Store token
+    api.setAuthToken(data.token);
+    
     toast.success("Welcome back!");
-    navigate({ to: "/dashboard" });
+    
+    // Reload to update auth context
+    window.location.href = "/dashboard";
   };
 
   return (

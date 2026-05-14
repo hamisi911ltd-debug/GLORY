@@ -1,12 +1,12 @@
 /**
- * Simple test function to verify Cloudflare Pages Functions are working
+ * Simple test function to verify Functions are working
  */
 
-export const onRequest: PagesFunction = async (context) => {
+export async function onRequest(context) {
   return new Response(JSON.stringify({
-    message: "Functions are working!",
+    message: "Hello from Cloudflare Pages Functions!",
     timestamp: new Date().toISOString(),
-    path: new URL(context.request.url).pathname
+    working: true
   }), {
     status: 200,
     headers: {
@@ -14,4 +14,4 @@ export const onRequest: PagesFunction = async (context) => {
       "Access-Control-Allow-Origin": "*"
     }
   });
-};
+}

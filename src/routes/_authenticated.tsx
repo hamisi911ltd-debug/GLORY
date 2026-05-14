@@ -1,8 +1,8 @@
 import { createFileRoute, Outlet, redirect, Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Logo } from "@/components/Logo";
+import { Logo } from "@/components/site/Logo";
 import { Home, Users, DollarSign, Calendar, Settings, LogOut, Menu, X, ChevronRight, ShieldCheck, Building2, ClipboardCheck, LayoutDashboard, CreditCard, BookOpen, CalendarDays, FileText, GraduationCap, Bell, Car, UserCog, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/login" });
+    const token = api.getAuthToken();
+    if (!token) throw redirect({ to: "/login" });
   },
   component: AuthenticatedLayout,
 });
@@ -103,8 +103,8 @@ function AuthenticatedLayout() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("full_name").eq("id", user.id).single()
-      .then(({ data }) => setProfile(data));
+    // Profile data is already in user object from API
+    setProfile({ full_name: user.full_name });
   }, [user]);
 
   if (loading) {

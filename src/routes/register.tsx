@@ -40,16 +40,23 @@ function RegisterPage() {
 
   const submit = async () => {
     setLoading(true);
-    const redirectUrl = `${window.location.origin}/dashboard`;
-    const { error } = await supabase.auth.signUp({
-      email: form.email, password: form.password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: { full_name: `${form.firstName} ${form.lastName}`, phone: form.phone, course: form.course, branch: form.branch },
-      },
+    
+    const { data, error } = await api.post<{ userId: string; message: string }>("/auth/register", {
+      email: form.email,
+      password: form.password,
+      firstName: form.firstName,
+      lastName: form.lastName,
+      phone: form.phone,
+      course: form.course,
+      branch: form.branch
     });
+    
     setLoading(false);
-    if (error) { toast.error(error.message); return; }
+    if (error || !data) { 
+      toast.error(error || "Registration failed"); 
+      return; 
+    }
+    
     setDone(true);
   };
 

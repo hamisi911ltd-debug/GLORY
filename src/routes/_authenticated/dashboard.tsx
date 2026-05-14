@@ -78,34 +78,25 @@ function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     const loadData = async () => {
+      setLoading(true);
       try {
-        // Get profile name
-        const { data } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
-        setName(data?.full_name?.split(" ")[0] ?? "there");
+        // Use user object from auth context for name
+        setName(user.full_name?.split(" ")[0] ?? "there");
 
-        // Fetch student data with real-time updates
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
+        // Fetch student statistics and profile from our new API
+        const { data, error } = await api.get<{ stats: any; student: any }>("/students/dashboard/stats");
         
-        setStudentData(profileData);
-        setLoading(false);
-
-        // Subscribe to real-time updates
-        const channel = supabase
-          .channel(`profile_${user.id}`)
-          .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `id=eq.${user.id}` }, (payload) => {
-            setStudentData(payload.new);
-          })
-          .subscribe();
-
-        return () => {
-          supabase.removeChannel(channel);
-        };
+        if (data) {
+          setStudentData({
+            ...data.stats,
+            full_name: user.full_name
+          });
+        } else if (error) {
+          console.error("Failed to fetch dashboard stats:", error);
+        }
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
+      } finally {
         setLoading(false);
       }
     };
