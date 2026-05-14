@@ -113,4 +113,19 @@ export function registerCourseRoutes(router) {
       return badRequest(error.message);
     }
   });
+
+  router.delete("/api/courses/:id", async (req, env) => {
+    const auth = await authenticate(req.raw, env);
+    if (auth.error) return auth.error;
+    const roleCheck = await checkRole(auth.user.id, env, "super_admin");
+    if (roleCheck) return roleCheck;
+    try {
+      const query = `DELETE FROM courses WHERE id = ?`;
+      await executeUpdate(env.DB, query, [req.params.id]);
+      return ok({ message: "Course deleted successfully" });
+    } catch (error) {
+      console.error('Delete course error:', error);
+      return badRequest(error.message);
+    }
+  });
 }

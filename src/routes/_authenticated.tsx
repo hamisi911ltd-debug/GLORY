@@ -2,14 +2,11 @@ import { createFileRoute, Outlet, redirect, Link, useRouterState } from "@tansta
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Logo } from "@/components/site/Logo";
-import {
-  Home, CalendarDays, BookOpen, CreditCard, FileText, GraduationCap,
-  Bell, Settings, LogOut, Users, Car, BarChart3, Building2, ShieldCheck,
-  UserCog, DollarSign, ClipboardCheck, Menu, X,
-} from "lucide-react";
+import { Logo } from "@/components/Logo";
+import { Home, Users, DollarSign, Calendar, Settings, LogOut, Menu, X, ChevronRight, ShieldCheck, Building2, ClipboardCheck, LayoutDashboard, CreditCard, BookOpen, CalendarDays, FileText, GraduationCap, Bell, Car, UserCog, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
@@ -205,106 +202,136 @@ function AuthenticatedLayout() {
         </div>
       </aside>
 
-      {/* Mobile Navigation */}
-      <div className="md:hidden">
-        {/* Mobile top bar */}
-        <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-b border-border bg-white px-4 shadow-sm">
-          <Logo />
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
-              {firstName[0]?.toUpperCase()}
-            </div>
-            <Button 
-              variant="ghost" 
-              size="icon-sm" 
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-          </div>
-        </div>
-
-        {/* Mobile menu overlay */}
-        {mobileMenuOpen && (
-          <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
-        )}
-
-        {/* Mobile menu */}
-        <div className={cn(
-          "fixed top-16 right-0 z-50 h-[calc(100vh-4rem)] w-80 transform bg-white shadow-xl transition-transform duration-300 ease-in-out",
-          mobileMenuOpen ? "translate-x-0" : "translate-x-full"
-        )}>
-          <div className="flex h-full flex-col">
-            <div className="border-b border-gray-200 p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
-                  {firstName[0]?.toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">Hi, {firstName}</p>
-                  <p className="text-sm text-gray-500">{roleLabel}</p>
-                </div>
-              </div>
-            </div>
-
-            <nav className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-2">
-                {navItems.map((item) => {
-                  const active = path === item.to || (item.to !== "/dashboard" && path.startsWith(item.to));
-                  return (
-                    <div key={item.label} onClick={() => setMobileMenuOpen(false)}>
-                      <NavLink item={item} active={active} mobile />
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Mobile role switcher */}
-              {!isStaff && (
-                <div className="mt-6 border-t border-gray-200 pt-4">
-                  <p className="px-3 text-xs text-gray-400 uppercase tracking-wider mb-2">Demo portals</p>
-                  <div className="space-y-1">
-                    <Link to="/staff/dashboard" className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50" onClick={() => setMobileMenuOpen(false)}>
-                      <Building2 className="h-4 w-4" /> Branch Admin
-                    </Link>
-                    <Link to="/staff/instructor" className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50" onClick={() => setMobileMenuOpen(false)}>
-                      <Users className="h-4 w-4" /> Instructor
-                    </Link>
-                    <Link to="/staff/finance" className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50" onClick={() => setMobileMenuOpen(false)}>
-                      <DollarSign className="h-4 w-4" /> Finance
-                    </Link>
-                    <Link to="/staff/examiner" className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50" onClick={() => setMobileMenuOpen(false)}>
-                      <ClipboardCheck className="h-4 w-4" /> Examiner
-                    </Link>
-                    <Link to="/superadmin/dashboard" className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50" onClick={() => setMobileMenuOpen(false)}>
-                      <ShieldCheck className="h-4 w-4" /> Super Admin
-                    </Link>
-                  </div>
-                </div>
+      {/* Mobile Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-white/80 px-2 pb-safe backdrop-blur-lg md:hidden">
+        {navItems.slice(0, 4).map((item) => {
+          const active = path === item.to || (item.to !== "/dashboard" && path.startsWith(item.to));
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.label}
+              to={item.to as any}
+              className={cn(
+                "flex flex-col items-center gap-1 px-3 py-1 transition-all active:scale-95",
+                active ? "text-brand" : "text-muted-foreground"
               )}
-            </nav>
-
-            <div className="border-t border-gray-200 p-4">
-              <div className="space-y-2">
-                <button className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50">
-                  <Settings className="h-4 w-4" /> Settings
-                </button>
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    signOut();
-                  }}
-                  className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                >
-                  <LogOut className="h-4 w-4" /> Sign out
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+            >
+              <Icon className={cn("h-5 w-5", active && "animate-in zoom-in-75 duration-300")} />
+              <span className="text-[10px] font-medium">{item.label}</span>
+              {active && <motion.div layoutId="mobile-nav-indicator" className="h-1 w-1 rounded-full bg-brand" />}
+            </Link>
+          );
+        })}
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className={cn(
+            "flex flex-col items-center gap-1 px-3 py-1 transition-all active:scale-95",
+            mobileMenuOpen ? "text-brand" : "text-muted-foreground"
+          )}
+        >
+          <Menu className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Menu</span>
+        </button>
       </div>
 
-      <main className="flex-1 overflow-x-hidden pt-16 md:pt-0">
+      {/* Mobile Navigation Drawer */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileMenuOpen(false)}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm md:hidden"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 right-0 z-50 w-[85%] max-w-xs bg-white shadow-2xl md:hidden"
+            >
+              <div className="flex h-full flex-col">
+                <div className="flex items-center justify-between border-b border-gray-100 p-4">
+                  <Logo />
+                  <Button variant="ghost" size="icon-sm" onClick={() => setMobileMenuOpen(false)}>
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="mb-6 flex items-center gap-3 rounded-2xl bg-surface-1 p-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand text-lg font-bold text-white shadow-lg">
+                      {firstName[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-bold text-navy">Hi, {firstName}</p>
+                      <p className="text-xs text-muted-foreground">{roleLabel}</p>
+                    </div>
+                  </div>
+
+                  <nav className="space-y-1">
+                    {navItems.map((item) => {
+                      const active = path === item.to || (item.to !== "/dashboard" && path.startsWith(item.to));
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.label}
+                          to={item.to as any}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={cn(
+                            "flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all active:bg-gray-100",
+                            active ? "bg-brand/5 text-brand" : "text-gray-600 hover:bg-gray-50"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className="h-5 w-5" />
+                            {item.label}
+                          </div>
+                          <ChevronRight className={cn("h-4 w-4 opacity-30", active && "opacity-100")} />
+                        </Link>
+                      );
+                    })}
+                  </nav>
+
+                  {!isStaff && (
+                    <div className="mt-8">
+                      <p className="px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Administrator Portals</p>
+                      <div className="space-y-1">
+                        {[
+                          { to: "/staff/dashboard", icon: Building2, label: "Branch Admin" },
+                          { to: "/staff/instructor", icon: Users, label: "Instructor" },
+                          { to: "/staff/finance", icon: DollarSign, label: "Finance" },
+                          { to: "/staff/examiner", icon: ClipboardCheck, label: "Examiner" },
+                          { to: "/superadmin/dashboard", icon: ShieldCheck, label: "Super Admin" },
+                        ].map(admin => (
+                          <Link key={admin.to} to={admin.to as any} onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-gray-500 hover:bg-gray-50">
+                            <admin.icon className="h-4 w-4" /> {admin.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-gray-100 p-4 pb-safe-offset-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="secondary" size="sm" className="rounded-xl">
+                      <Settings className="mr-2 h-4 w-4" /> Settings
+                    </Button>
+                    <Button variant="outline" size="sm" className="rounded-xl text-danger hover:text-danger" onClick={() => { setMobileMenuOpen(false); signOut(); }}>
+                      <LogOut className="mr-2 h-4 w-4" /> Logout
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <main className="flex-1 overflow-x-hidden pt-16 md:pt-0 pb-20 md:pb-0">
         <Outlet />
       </main>
     </div>

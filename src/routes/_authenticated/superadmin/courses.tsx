@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated/superadmin/courses")({
   head: () => ({ meta: [{ title: "Course Management — DriveSchool Pro" }] }),
@@ -52,13 +52,9 @@ function CoursesPage() {
   const loadCourses = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("courses")
-        .select("*")
-        .order("name", { ascending: true });
-
-      if (error) throw error;
-      setCourses(data || []);
+      const { data, error } = await api.get<{ courses: Course[] }>("/courses");
+      if (error) throw new Error(error);
+      setCourses(data?.courses || []);
     } catch (err: any) {
       console.error("Load courses error:", err);
       toast.error("Failed to load courses");
@@ -75,17 +71,12 @@ function CoursesPage() {
     e.preventDefault();
     try {
       if (editingCourse) {
-        const { error } = await supabase
-          .from("courses")
-          .update(form)
-          .eq("id", editingCourse.id);
-        if (error) throw error;
+        const { error } = await api.put(`/courses/${editingCourse.id}`, form);
+        if (error) throw new Error(error);
         toast.success("Course updated successfully");
       } else {
-        const { error } = await supabase
-          .from("courses")
-          .insert(form);
-        if (error) throw error;
+        const { error } = await api.post("/courses", form);
+        if (error) throw new Error(error);
         toast.success("Course created successfully");
       }
       setIsModalOpen(false);
@@ -115,8 +106,8 @@ function CoursesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this course?")) return;
     try {
-      const { error } = await supabase.from("courses").delete().eq("id", id);
-      if (error) throw error;
+      const { error } = await api.delete(`/courses/${id}`);
+      if (error) throw new Error(error);
       toast.success("Course deleted");
       loadCourses();
     } catch (err: any) {

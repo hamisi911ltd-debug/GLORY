@@ -124,7 +124,8 @@ function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Status Overview */}
+      <div className="mt-8 grid gap-4 grid-cols-2 lg:grid-cols-4">
         <KpiCard icon={Calendar} tone="info" label="Next Lesson" value="Wed 14 May" hint="10:00am · James Mwangi" />
         <KpiCard icon={CheckCircle2} tone="success" label="Lessons Completed" value="8 / 20" hint="40% complete" />
         <KpiCard icon={BookOpen} tone="warning" label="Theory Score" value="74%" hint="2 categories left" />
