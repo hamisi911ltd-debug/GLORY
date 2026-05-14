@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   DollarSign, TrendingUp, TrendingDown, Download, Plus, CheckCircle2,
-  Clock, XCircle, FileText, BarChart3,
+  Clock, XCircle, FileText, BarChart3, AlertTriangle, User, Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,18 @@ interface PayRecord {
   ref: string;
 }
 
+interface PendingBalance {
+  id: string;
+  student: string;
+  phone: string;
+  course: string;
+  totalFees: number;
+  amountPaid: number;
+  balance: number;
+  lastPayment: string;
+  daysOverdue: number;
+}
+
 const allPayments: PayRecord[] = [
   { id: "1", student: "Amara Njeri", date: "10 May 2026", amount: 500, method: "mpesa", status: "paid", ref: "QHJ7K2L9" },
   { id: "2", student: "Brian Kiprotich", date: "10 May 2026", amount: 11500, method: "card", status: "paid", ref: "PI_3NxK" },
@@ -37,6 +49,15 @@ const allPayments: PayRecord[] = [
   { id: "4", student: "David Mwenda", date: "9 May 2026", amount: 500, method: "mpesa", status: "pending", ref: "—" },
   { id: "5", student: "Esther Kamau", date: "8 May 2026", amount: 8500, method: "mpesa", status: "paid", ref: "QHJ8M3N1" },
   { id: "6", student: "Felix Omondi", date: "7 May 2026", amount: 500, method: "card", status: "failed", ref: "—" },
+];
+
+const pendingBalances: PendingBalance[] = [
+  { id: "1", student: "David Mwenda", phone: "+254712345678", course: "Class B - Manual", totalFees: 11500, amountPaid: 3000, balance: 8500, lastPayment: "15 Apr 2026", daysOverdue: 25 },
+  { id: "2", student: "Grace Wanjiku", phone: "+254723456789", course: "Class B - Automatic", totalFees: 11500, amountPaid: 6000, balance: 5500, lastPayment: "28 Apr 2026", daysOverdue: 12 },
+  { id: "3", student: "James Kiprotich", phone: "+254734567890", course: "Class A - Motorcycle", totalFees: 6000, amountPaid: 2500, balance: 3500, lastPayment: "5 May 2026", daysOverdue: 5 },
+  { id: "4", student: "Mary Achieng", phone: "+254745678901", course: "Class B - Manual", totalFees: 11500, amountPaid: 9000, balance: 2500, lastPayment: "1 May 2026", daysOverdue: 9 },
+  { id: "5", student: "Peter Maina", phone: "+254756789012", course: "Class C - Truck", totalFees: 14000, amountPaid: 4000, balance: 10000, lastPayment: "10 Apr 2026", daysOverdue: 30 },
+  { id: "6", student: "Sarah Njoki", phone: "+254767890123", course: "Class B - Automatic", totalFees: 11500, amountPaid: 8500, balance: 3000, lastPayment: "3 May 2026", daysOverdue: 7 },
 ];
 
 const revenueData = [
@@ -59,12 +80,13 @@ const statusConfig: Record<PayStatus, { label: string; icon: any; variant: "succ
 };
 
 function FinanceDashboard() {
-  const [tab, setTab] = useState<"payments" | "invoices" | "expenses" | "reports">("payments");
+  const [tab, setTab] = useState<"payments" | "pending" | "invoices" | "expenses" | "reports">("payments");
   const [cashModal, setCashModal] = useState(false);
   const [cashForm, setCashForm] = useState({ student: "", amount: "", note: "" });
 
   const totalRevenue = allPayments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0);
   const outstanding = allPayments.filter((p) => p.status === "pending").reduce((s, p) => s + p.amount, 0);
+  const totalOutstanding = pendingBalances.reduce((s, p) => s + p.balance, 0);
   const mpesaTotal = allPayments.filter((p) => p.status === "paid" && p.method === "mpesa").reduce((s, p) => s + p.amount, 0);
   const cardTotal = allPayments.filter((p) => p.status === "paid" && p.method === "card").reduce((s, p) => s + p.amount, 0);
 
@@ -75,8 +97,13 @@ function FinanceDashboard() {
     toast.success(`Cash payment of KES ${Number(cashForm.amount).toLocaleString()} recorded`);
   };
 
+  const sendReminder = (student: string, phone: string, balance: number) => {
+    toast.success(`Payment reminder sent to ${student} (${phone}) for KES ${balance.toLocaleString()}`);
+  };
+
   const TABS = [
     { key: "payments" as const, label: "Payments", icon: DollarSign },
+    { key: "pending" as const, label: "Outstanding", icon: AlertTriangle, badge: pendingBalances.length },
     { key: "invoices" as const, label: "Invoices", icon: FileText },
     { key: "expenses" as const, label: "Expenses", icon: TrendingDown },
     { key: "reports" as const, label: "Reports", icon: BarChart3 },
@@ -100,7 +127,7 @@ function FinanceDashboard() {
         {[
           { label: "Total revenue", value: `KES ${totalRevenue.toLocaleString()}`, sub: "This month", icon: TrendingUp, color: "text-success" },
           { label: "Collected today", value: "KES 12,000", sub: "3 transactions", icon: DollarSign, color: "text-info" },
-          { label: "Outstanding", value: `KES ${outstanding.toLocaleString()}`, sub: `${allPayments.filter(p => p.status === "pending").length} pending`, icon: Clock, color: "text-warning-foreground" },
+          { label: "Outstanding balances", value: `KES ${totalOutstanding.toLocaleString()}`, sub: `${pendingBalances.length} students`, icon: AlertTriangle, color: "text-danger" },
           { label: "M-Pesa vs Card", value: `${Math.round((mpesaTotal / (mpesaTotal + cardTotal)) * 100)}% M-Pesa`, sub: `KES ${cardTotal.toLocaleString()} card`, icon: BarChart3, color: "text-purple" },
         ].map((k) => (
           <div key={k.label} className="rounded-xl border border-border bg-white p-5">
@@ -123,17 +150,163 @@ function FinanceDashboard() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative",
               tab === t.key ? "bg-white text-navy shadow-sm" : "text-muted-foreground hover:text-foreground",
             )}
           >
             <t.icon className="h-4 w-4" />
             <span className="hidden sm:inline">{t.label}</span>
+            {t.badge && (
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-[10px] font-bold text-white">
+                {t.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       <div className="mt-6">
+        {tab === "pending" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-h2 text-navy">Outstanding Balances</h2>
+                <p className="text-sm text-muted-foreground">Students with pending payments</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" onClick={() => toast.success("Bulk reminder sent to all students")}>
+                  Send bulk reminder
+                </Button>
+                <Button variant="primary" size="sm" onClick={() => toast.success("Outstanding balances report exported")}>
+                  <Download className="mr-1.5 h-4 w-4" /> Export
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-border bg-white">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-surface-1">
+                      <th className="px-4 py-3 text-left text-label-sm text-muted-foreground">Student</th>
+                      <th className="px-4 py-3 text-left text-label-sm text-muted-foreground">Course</th>
+                      <th className="px-4 py-3 text-right text-label-sm text-muted-foreground">Total Fees</th>
+                      <th className="px-4 py-3 text-right text-label-sm text-muted-foreground">Paid</th>
+                      <th className="px-4 py-3 text-right text-label-sm text-muted-foreground">Balance</th>
+                      <th className="px-4 py-3 text-left text-label-sm text-muted-foreground">Last Payment</th>
+                      <th className="px-4 py-3 text-center text-label-sm text-muted-foreground">Days Overdue</th>
+                      <th className="px-4 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {pendingBalances
+                      .sort((a, b) => b.daysOverdue - a.daysOverdue)
+                      .map((student) => (
+                      <tr key={student.id} className="hover:bg-surface-1 transition-colors">
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="font-medium text-navy">{student.student}</p>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Phone className="h-3 w-3" />
+                              {student.phone}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{student.course}</td>
+                        <td className="px-4 py-3 text-right font-medium text-navy">
+                          KES {student.totalFees.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 text-right text-success font-medium">
+                          KES {student.amountPaid.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className={cn(
+                            "font-bold",
+                            student.balance > 5000 ? "text-danger" : 
+                            student.balance > 2000 ? "text-warning-foreground" : "text-muted-foreground"
+                          )}>
+                            KES {student.balance.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                          {student.lastPayment}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Badge 
+                            variant={student.daysOverdue > 21 ? "danger" : student.daysOverdue > 14 ? "warning" : "default"} 
+                            size="sm"
+                          >
+                            {student.daysOverdue} days
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => sendReminder(student.student, student.phone, student.balance)}
+                              className="text-xs text-brand-blue hover:underline"
+                            >
+                              Send reminder
+                            </button>
+                            <button 
+                              onClick={() => toast.success(`Payment plan created for ${student.student}`)}
+                              className="text-xs text-success hover:underline"
+                            >
+                              Payment plan
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Summary cards */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="rounded-xl border border-border bg-white p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-danger-light">
+                    <AlertTriangle className="h-5 w-5 text-danger" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Critical (>21 days)</p>
+                    <p className="text-h3 font-bold text-danger">
+                      {pendingBalances.filter(p => p.daysOverdue > 21).length} students
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border border-border bg-white p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning-light">
+                    <Clock className="h-5 w-5 text-warning-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Moderate (14-21 days)</p>
+                    <p className="text-h3 font-bold text-warning-foreground">
+                      {pendingBalances.filter(p => p.daysOverdue > 14 && p.daysOverdue <= 21).length} students
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border border-border bg-white p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-info-light">
+                    <User className="h-5 w-5 text-info" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Recent (<14 days)</p>
+                    <p className="text-h3 font-bold text-info">
+                      {pendingBalances.filter(p => p.daysOverdue <= 14).length} students
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {tab === "payments" && (
           <div className="overflow-hidden rounded-xl border border-border bg-white">
             <div className="overflow-x-auto">
