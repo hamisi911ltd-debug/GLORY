@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DollarSign, TrendingUp, TrendingDown, Download, Plus, CheckCircle2,
   Clock, XCircle, FileText, BarChart3, AlertTriangle, User, Phone,
+  Edit, Trash2, Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/staff/finance")({
   head: () => ({ meta: [{ title: "Finance Dashboard — DriveSchool Pro" }] }),
@@ -23,11 +25,13 @@ type PayStatus = "paid" | "pending" | "failed";
 interface PayRecord {
   id: string;
   student: string;
+  student_id: string;
   date: string;
   amount: number;
   method: PayMethod;
   status: PayStatus;
   ref: string;
+  description?: string;
 }
 
 interface PendingBalance {
@@ -41,61 +45,72 @@ interface PendingBalance {
   lastPayment: string;
   daysOverdue: number;
 }
-
-const allPayments: PayRecord[] = [
-  { id: "1", student: "Amara Njeri", date: "10 May 2026", amount: 500, method: "mpesa", status: "paid", ref: "QHJ7K2L9" },
-  { id: "2", student: "Brian Kiprotich", date: "10 May 2026", amount: 11500, method: "card", status: "paid", ref: "PI_3NxK" },
-  { id: "3", student: "Cynthia Odhiambo", date: "9 May 2026", amount: 500, method: "cash", status: "paid", ref: "CASH-042" },
-  { id: "4", student: "David Mwenda", date: "9 May 2026", amount: 500, method: "mpesa", status: "pending", ref: "—" },
-  { id: "5", student: "Esther Kamau", date: "8 May 2026", amount: 8500, method: "mpesa", status: "paid", ref: "QHJ8M3N1" },
-  { id: "6", student: "Felix Omondi", date: "7 May 2026", amount: 500, method: "card", status: "failed", ref: "—" },
-];
-
-const pendingBalances: PendingBalance[] = [
-  { id: "1", student: "David Mwenda", phone: "+254712345678", course: "Class B - Manual", totalFees: 11500, amountPaid: 3000, balance: 8500, lastPayment: "15 Apr 2026", daysOverdue: 25 },
-  { id: "2", student: "Grace Wanjiku", phone: "+254723456789", course: "Class B - Automatic", totalFees: 11500, amountPaid: 6000, balance: 5500, lastPayment: "28 Apr 2026", daysOverdue: 12 },
-  { id: "3", student: "James Kiprotich", phone: "+254734567890", course: "Class A - Motorcycle", totalFees: 6000, amountPaid: 2500, balance: 3500, lastPayment: "5 May 2026", daysOverdue: 5 },
-  { id: "4", student: "Mary Achieng", phone: "+254745678901", course: "Class B - Manual", totalFees: 11500, amountPaid: 9000, balance: 2500, lastPayment: "1 May 2026", daysOverdue: 9 },
-  { id: "5", student: "Peter Maina", phone: "+254756789012", course: "Class C - Truck", totalFees: 14000, amountPaid: 4000, balance: 10000, lastPayment: "10 Apr 2026", daysOverdue: 30 },
-  { id: "6", student: "Sarah Njoki", phone: "+254767890123", course: "Class B - Automatic", totalFees: 11500, amountPaid: 8500, balance: 3000, lastPayment: "3 May 2026", daysOverdue: 7 },
-];
-
-const revenueData = [
-  { week: "W1", mpesa: 18000, card: 12000, cash: 5000 },
-  { week: "W2", mpesa: 22000, card: 15000, cash: 7000 },
-  { week: "W3", mpesa: 19000, card: 11000, cash: 4000 },
-  { week: "W4", mpesa: 25500, card: 18000, cash: 8000 },
-];
-
-const methodConfig: Record<PayMethod, { label: string; color: string }> = {
-  mpesa: { label: "M-Pesa", color: "bg-success-light text-success" },
-  card: { label: "Card", color: "bg-info-light text-info" },
-  cash: { label: "Cash", color: "bg-warning-light text-warning-foreground" },
-};
-
-const statusConfig: Record<PayStatus, { label: string; icon: any; variant: "success" | "warning" | "danger" }> = {
-  paid: { label: "Paid", icon: CheckCircle2, variant: "success" },
-  pending: { label: "Pending", icon: Clock, variant: "warning" },
-  failed: { label: "Failed", icon: XCircle, variant: "danger" },
-};
-
 function FinanceDashboard() {
   const [tab, setTab] = useState<"payments" | "pending" | "invoices" | "expenses" | "reports">("payments");
+  const [payments, setPayments] = useState<PayRecord[]>([]);
+  const [balances, setBalances] = useState<PendingBalance[]>([]);
+  const [loading, setLoading] = useState(true);
   const [cashModal, setCashModal] = useState(false);
-  const [cashForm, setCashForm] = useState({ student: "", amount: "", note: "" });
+  const [editModal, setEditModal] = useState<PayRecord | null>(null);
+  const [cashForm, setCashForm] = useState({ student_id: "", amount: "", note: "", method: "cash" as PayMethod });
 
-  const totalRevenue = allPayments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0);
-  const outstanding = allPayments.filter((p) => p.status === "pending").reduce((s, p) => s + p.amount, 0);
-  const totalOutstanding = pendingBalances.reduce((s, p) => s + p.balance, 0);
-  const mpesaTotal = allPayments.filter((p) => p.status === "paid" && p.method === "mpesa").reduce((s, p) => s + p.amount, 0);
-  const cardTotal = allPayments.filter((p) => p.status === "paid" && p.method === "card").reduce((s, p) => s + p.amount, 0);
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      // Fetch payments
+      const { data: payData } = await supabase
+        .from("payments")
+        .select("*, students(id, profiles(full_name))")
+        .order("created_at", { ascending: false });
 
-  const recordCash = () => {
-    if (!cashForm.student || !cashForm.amount) { toast.error("Fill in all required fields"); return; }
-    setCashModal(false);
-    setCashForm({ student: "", amount: "", note: "" });
-    toast.success(`Cash payment of KES ${Number(cashForm.amount).toLocaleString()} recorded`);
+      if (payData) {
+        setPayments(payData.map((p: any) => ({
+          id: p.id,
+          student: p.students?.profiles?.full_name || "Unknown",
+          student_id: p.student_id,
+          date: new Date(p.created_at).toLocaleDateString("en-GB"),
+          amount: p.amount,
+          method: p.payment_method as PayMethod,
+          status: (p.status === "completed" ? "paid" : p.status) as PayStatus,
+          ref: p.payment_reference || "—",
+          description: p.description
+        })));
+      }
+
+      // Fetch students for balances
+      const { data: stuData } = await supabase
+        .from("students")
+        .select("*, profiles(full_name, phone), courses(name, price)");
+
+      if (stuData) {
+        setBalances(stuData.map((s: any) => ({
+          id: s.id,
+          student: s.profiles?.full_name || "Unknown",
+          phone: s.profiles?.phone || "N/A",
+          course: s.courses?.name || "N/A",
+          totalFees: s.courses?.price || 0,
+          amountPaid: s.total_paid || 0,
+          balance: s.balance,
+          lastPayment: "N/A",
+          daysOverdue: 0
+        })));
+      }
+    } catch (error) {
+      console.error("Load data error:", error);
+      toast.error("Failed to load data");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const totalRevenue = payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0);
+  const totalOutstanding = balances.reduce((s, p) => s + p.balance, 0);
+  const mpesaTotal = payments.filter((p) => p.status === "paid" && p.method === "mpesa").reduce((s, p) => s + p.amount, 0);
+  const cardTotal = payments.filter((p) => p.status === "paid" && p.method === "card").reduce((s, p) => s + p.amount, 0);
 
   const sendReminder = (student: string, phone: string, balance: number) => {
     toast.success(`Payment reminder sent to ${student} (${phone}) for KES ${balance.toLocaleString()}`);
@@ -103,11 +118,75 @@ function FinanceDashboard() {
 
   const TABS = [
     { key: "payments" as const, label: "Payments", icon: DollarSign },
-    { key: "pending" as const, label: "Outstanding", icon: AlertTriangle, badge: pendingBalances.length },
+    { key: "pending" as const, label: "Outstanding", icon: AlertTriangle, badge: balances.filter(b => b.balance > 0).length },
     { key: "invoices" as const, label: "Invoices", icon: FileText },
     { key: "expenses" as const, label: "Expenses", icon: TrendingDown },
     { key: "reports" as const, label: "Reports", icon: BarChart3 },
   ];
+
+  const handleRecordPayment = async () => {
+    if (!cashForm.student_id || !cashForm.amount) {
+      toast.error("Please fill in student and amount");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("payments").insert({
+        student_id: cashForm.student_id,
+        amount: parseFloat(cashForm.amount),
+        payment_method: cashForm.method,
+        status: "completed",
+        description: cashForm.note,
+        payment_reference: `MAN-${Date.now()}`
+      });
+
+      if (error) throw error;
+
+      toast.success("Payment recorded successfully");
+      setCashModal(false);
+      setCashForm({ student_id: "", amount: "", note: "", method: "cash" });
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleUpdatePayment = async () => {
+    if (!editModal) return;
+
+    try {
+      const { error } = await supabase
+        .from("payments")
+        .update({
+          amount: editModal.amount,
+          payment_method: editModal.method,
+          status: editModal.status === "paid" ? "completed" : editModal.status,
+          description: editModal.description
+        })
+        .eq("id", editModal.id);
+
+      if (error) throw error;
+
+      toast.success("Payment updated");
+      setEditModal(null);
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleDeletePayment = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this payment?")) return;
+
+    try {
+      const { error } = await supabase.from("payments").delete().eq("id", id);
+      if (error) throw error;
+
+      toast.success("Payment deleted");
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message);
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-10">
@@ -199,7 +278,7 @@ function FinanceDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {pendingBalances
+                    {balances
                       .sort((a, b) => b.daysOverdue - a.daysOverdue)
                       .map((student) => (
                       <tr key={student.id} className="hover:bg-surface-1 transition-colors">
@@ -272,7 +351,7 @@ function FinanceDashboard() {
                   <div>
                     <p className="text-sm text-muted-foreground">Critical (>21 days)</p>
                     <p className="text-h3 font-bold text-danger">
-                      {pendingBalances.filter(p => p.daysOverdue > 21).length} students
+                      {balances.filter(p => p.daysOverdue > 21).length} students
                     </p>
                   </div>
                 </div>
@@ -285,7 +364,7 @@ function FinanceDashboard() {
                   <div>
                     <p className="text-sm text-muted-foreground">Moderate (14-21 days)</p>
                     <p className="text-h3 font-bold text-warning-foreground">
-                      {pendingBalances.filter(p => p.daysOverdue > 14 && p.daysOverdue <= 21).length} students
+                      {balances.filter(p => p.daysOverdue > 14 && p.daysOverdue <= 21).length} students
                     </p>
                   </div>
                 </div>
@@ -298,7 +377,7 @@ function FinanceDashboard() {
                   <div>
                     <p className="text-sm text-muted-foreground">Recent (<14 days)</p>
                     <p className="text-h3 font-bold text-info">
-                      {pendingBalances.filter(p => p.daysOverdue <= 14).length} students
+                      {balances.filter(p => p.daysOverdue <= 14).length} students
                     </p>
                   </div>
                 </div>
@@ -323,7 +402,7 @@ function FinanceDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {allPayments.map((p) => {
+                  {payments.map((p) => {
                     const method = methodConfig[p.method];
                     const status = statusConfig[p.status];
                     const StatusIcon = status.icon;
@@ -342,16 +421,27 @@ function FinanceDashboard() {
                         </td>
                         <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.ref}</td>
                         <td className="px-4 py-3">
-                          {p.status === "paid" && (
-                            <button onClick={() => toast.success("Receipt downloaded")} className="flex items-center gap-1 text-xs text-brand-blue hover:underline">
-                              <Download className="h-3.5 w-3.5" /> Receipt
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setEditModal(p)}
+                              className="rounded p-1 hover:bg-surface-2 text-muted-foreground hover:text-brand"
+                              title="Edit payment"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
                             </button>
-                          )}
-                          {p.status === "pending" && (
-                            <button onClick={() => toast.success("Marked as received")} className="text-xs text-success hover:underline">
-                              Mark received
+                            <button
+                              onClick={() => handleDeletePayment(p.id)}
+                              className="rounded p-1 hover:bg-danger-light text-muted-foreground hover:text-danger"
+                              title="Delete payment"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
-                          )}
+                            {p.status === "paid" && (
+                              <button onClick={() => toast.success("Receipt downloaded")} className="flex items-center gap-1 text-xs text-brand-blue hover:underline">
+                                <Download className="h-3.5 w-3.5" /> Receipt
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -446,15 +536,36 @@ function FinanceDashboard() {
       {cashModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-h2 text-navy">Record cash payment</h2>
+            <h2 className="text-h2 text-navy">Record payment</h2>
             <div className="mt-5 space-y-4">
               <div className="space-y-1.5">
-                <Label>Student name *</Label>
-                <Input value={cashForm.student} onChange={(e) => setCashForm({ ...cashForm, student: e.target.value })} placeholder="Search student…" />
+                <Label>Student *</Label>
+                <select
+                  className="w-full rounded-lg border border-border p-2 text-sm"
+                  value={cashForm.student_id}
+                  onChange={(e) => setCashForm({ ...cashForm, student_id: e.target.value })}
+                >
+                  <option value="">Select student...</option>
+                  {balances.map(b => (
+                    <option key={b.id} value={b.id}>{b.student}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-1.5">
                 <Label>Amount (KES) *</Label>
                 <Input type="number" value={cashForm.amount} onChange={(e) => setCashForm({ ...cashForm, amount: e.target.value })} placeholder="0" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Method *</Label>
+                <select
+                  className="w-full rounded-lg border border-border p-2 text-sm"
+                  value={cashForm.method}
+                  onChange={(e) => setCashForm({ ...cashForm, method: e.target.value as PayMethod })}
+                >
+                  <option value="cash">Cash</option>
+                  <option value="mpesa">M-Pesa</option>
+                  <option value="card">Card</option>
+                </select>
               </div>
               <div className="space-y-1.5">
                 <Label>Note</Label>
@@ -463,7 +574,58 @@ function FinanceDashboard() {
             </div>
             <div className="mt-5 flex gap-3">
               <Button variant="secondary" size="lg" className="flex-1" onClick={() => setCashModal(false)}>Cancel</Button>
-              <Button variant="primary" size="lg" className="flex-1" onClick={recordCash}>Record</Button>
+              <Button variant="primary" size="lg" className="flex-1" onClick={handleRecordPayment}>Record</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit payment modal */}
+      {editModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="text-h2 text-navy">Edit payment</h2>
+            <div className="mt-5 space-y-4">
+              <div className="space-y-1.5">
+                <Label>Student</Label>
+                <Input value={editModal.student} disabled />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Amount (KES) *</Label>
+                <Input type="number" value={editModal.amount} onChange={(e) => setEditModal({ ...editModal, amount: parseFloat(e.target.value) })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Method *</Label>
+                <select
+                  className="w-full rounded-lg border border-border p-2 text-sm"
+                  value={editModal.method}
+                  onChange={(e) => setEditModal({ ...editModal, method: e.target.value as PayMethod })}
+                >
+                  <option value="cash">Cash</option>
+                  <option value="mpesa">M-Pesa</option>
+                  <option value="card">Card</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status *</Label>
+                <select
+                  className="w-full rounded-lg border border-border p-2 text-sm"
+                  value={editModal.status}
+                  onChange={(e) => setEditModal({ ...editModal, status: e.target.value as PayStatus })}
+                >
+                  <option value="paid">Paid</option>
+                  <option value="pending">Pending</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Note</Label>
+                <Input value={editModal.description} onChange={(e) => setEditModal({ ...editModal, description: e.target.value })} />
+              </div>
+            </div>
+            <div className="mt-5 flex gap-3">
+              <Button variant="secondary" size="lg" className="flex-1" onClick={() => setEditModal(null)}>Cancel</Button>
+              <Button variant="primary" size="lg" className="flex-1" onClick={handleUpdatePayment}>Save changes</Button>
             </div>
           </div>
         </div>

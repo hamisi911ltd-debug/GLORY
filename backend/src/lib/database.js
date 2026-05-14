@@ -338,6 +338,18 @@ export const PaymentService = {
     }
     
     return result;
+  },
+
+  async update(db, id, updates) {
+    const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+    const values = Object.values(updates);
+    const query = `UPDATE payments SET ${fields} WHERE id = ?`;
+    return await executeUpdate(db, query, [...values, id]);
+  },
+
+  async delete(db, id) {
+    const query = `DELETE FROM payments WHERE id = ?`;
+    return await executeUpdate(db, query, [id]);
   }
 };
 
@@ -392,6 +404,13 @@ export const CourseService = {
   async findById(db, id) {
     const query = `SELECT * FROM courses WHERE id = ?`;
     return await executeQueryFirst(db, query, [id]);
+  },
+
+  async update(db, id, updates) {
+    const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+    const values = Object.values(updates);
+    const query = `UPDATE courses SET ${fields} WHERE id = ?`;
+    return await executeUpdate(db, query, [...values, id]);
   }
 };
 

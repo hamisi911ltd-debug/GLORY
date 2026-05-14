@@ -62,7 +62,7 @@ const SUPER_ADMIN_NAV = [
   { to: "/superadmin/dashboard", label: "Platform Overview", icon: Home },
   { to: "/superadmin/users", label: "User Management", icon: UserCog },
   { to: "/dashboard", label: "Branches", icon: Building2, soon: true },
-  { to: "/dashboard", label: "Courses & Pricing", icon: BookOpen, soon: true },
+  { to: "/superadmin/courses", label: "Courses & Pricing", icon: BookOpen },
   { to: "/dashboard", label: "Audit Logs", icon: ShieldCheck, soon: true },
   { to: "/dashboard", label: "Reports", icon: BarChart3, soon: true },
 ];

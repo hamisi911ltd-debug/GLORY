@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Calendar, CheckCircle2, BookOpen, AlertCircle, ArrowRight, Clock, MapPin, TrendingUp, Users, DollarSign, Car, Bike, Truck } from "lucide-react";
+import { Calendar, CheckCircle2, BookOpen, AlertCircle, ArrowRight, Clock, MapPin, TrendingUp, Users, DollarSign, Car, Bike, Truck, BarChart, PieChart } from "lucide-react";
 import { KpiCard } from "@/components/site/KpiCard";
 import { ProgressRing } from "@/components/site/ProgressRing";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { LineChart, Line, BarChart as RechartsBarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Area, AreaChart } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — DriveSchool Pro" }] }),
@@ -29,17 +29,37 @@ const milestones = [
   { label: "Certificate", state: "todo" },
 ];
 
-// Sample chart data
+// Enhanced chart data
 const lessonProgressData = [
-  { week: "Week 1", completed: 2, pending: 0 },
-  { week: "Week 2", completed: 4, pending: 1 },
-  { week: "Week 3", completed: 6, pending: 2 },
-  { week: "Week 4", completed: 8, pending: 2 },
+  { week: "Week 1", completed: 2, pending: 0, target: 3 },
+  { week: "Week 2", completed: 4, pending: 1, target: 5 },
+  { week: "Week 3", completed: 6, pending: 2, target: 8 },
+  { week: "Week 4", completed: 8, pending: 2, target: 10 },
+  { week: "Week 5", completed: 10, pending: 1, target: 12 },
+  { week: "Week 6", completed: 12, pending: 0, target: 15 },
 ];
 
 const paymentData = [
   { name: "Paid", value: 8000, fill: "#10b981" },
   { name: "Pending", value: 3500, fill: "#f59e0b" },
+];
+
+const performanceData = [
+  { subject: "Highway Code", score: 85, maxScore: 100 },
+  { subject: "Road Signs", score: 92, maxScore: 100 },
+  { subject: "Parking", score: 78, maxScore: 100 },
+  { subject: "Maneuvers", score: 88, maxScore: 100 },
+  { subject: "Safety", score: 95, maxScore: 100 },
+];
+
+const weeklyActivityData = [
+  { day: "Mon", lessons: 2, theory: 1, practice: 1 },
+  { day: "Tue", lessons: 1, theory: 2, practice: 0 },
+  { day: "Wed", lessons: 2, theory: 1, practice: 1 },
+  { day: "Thu", lessons: 1, theory: 0, practice: 2 },
+  { day: "Fri", lessons: 2, theory: 1, practice: 1 },
+  { day: "Sat", lessons: 3, theory: 0, practice: 2 },
+  { day: "Sun", lessons: 0, theory: 1, practice: 0 },
 ];
 
 // Course data matching landing page
@@ -112,7 +132,7 @@ function DashboardPage() {
           action={<Button size="sm" variant="primary">Pay now</Button>} />
       </div>
 
-      {/* Charts Section */}
+      {/* Enhanced Charts Section */}
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {/* Lesson Progress Chart */}
         <div className="rounded-2xl border border-border bg-white p-6 shadow-xs">
@@ -120,19 +140,29 @@ function DashboardPage() {
             <h2 className="text-h3 text-navy">Lesson Progress</h2>
             <Badge variant="info" size="sm">8/20 completed</Badge>
           </div>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={lessonProgressData}>
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={lessonProgressData}>
+              <defs>
+                <linearGradient id="completedGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                </linearGradient>
+                <linearGradient id="targetGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1}/>
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="week" stroke="#6b7280" />
               <YAxis stroke="#6b7280" />
               <Tooltip 
                 contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }}
-                formatter={(value) => [`${value} lessons`, "Count"]}
+                formatter={(value, name) => [`${value} lessons`, name === 'completed' ? 'Completed' : name === 'target' ? 'Target' : 'Pending']}
               />
               <Legend />
-              <Bar dataKey="completed" fill="#10b981" name="Completed" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="pending" fill="#f59e0b" name="Pending" radius={[8, 8, 0, 0]} />
-            </BarChart>
+              <Area type="monotone" dataKey="target" stroke="#6366f1" fillOpacity={1} fill="url(#targetGradient)" name="Target" />
+              <Area type="monotone" dataKey="completed" stroke="#10b981" fillOpacity={1} fill="url(#completedGradient)" name="Completed" />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
 
@@ -143,14 +173,14 @@ function DashboardPage() {
             <Badge variant="success" size="sm">KES 8,000 paid</Badge>
           </div>
           <div className="flex items-center justify-center gap-8">
-            <ResponsiveContainer width={160} height={160}>
-              <PieChart>
+            <ResponsiveContainer width={180} height={180}>
+              <RechartsPieChart>
                 <Pie
                   data={paymentData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
-                  outerRadius={80}
+                  outerRadius={90}
                   paddingAngle={2}
                   dataKey="value"
                 >
@@ -158,18 +188,74 @@ function DashboardPage() {
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Pie>
-              </PieChart>
+                <Tooltip formatter={(value) => [`KES ${value}`, ""]} />
+              </RechartsPieChart>
             </ResponsiveContainer>
             <div className="space-y-3">
               {paymentData.map((item) => (
                 <div key={item.name} className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.fill }} />
                   <span className="text-sm text-muted-foreground">{item.name}</span>
-                  <span className="text-sm font-semibold text-navy ml-auto">KES {item.value}</span>
+                  <span className="text-sm font-semibold text-navy ml-auto">KES {item.value.toLocaleString()}</span>
                 </div>
               ))}
+              <div className="pt-2 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-navy">Total Course Fee</span>
+                  <span className="text-sm font-bold text-navy">KES 11,500</span>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-xs text-muted-foreground">Completion</span>
+                  <span className="text-xs font-medium text-success">70%</span>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* New Analytics Section */}
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        {/* Performance Analysis */}
+        <div className="rounded-2xl border border-border bg-white p-6 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-h3 text-navy">Performance Analysis</h2>
+            <Badge variant="info" size="sm">Theory Tests</Badge>
+          </div>
+          <ResponsiveContainer width="100%" height={250}>
+            <RechartsBarChart data={performanceData} layout="horizontal">
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis type="number" domain={[0, 100]} stroke="#6b7280" />
+              <YAxis dataKey="subject" type="category" width={80} stroke="#6b7280" />
+              <Tooltip 
+                formatter={(value) => [`${value}%`, "Score"]}
+                contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }}
+              />
+              <Bar dataKey="score" fill="#10b981" radius={[0, 4, 4, 0]} />
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Weekly Activity */}
+        <div className="rounded-2xl border border-border bg-white p-6 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-h3 text-navy">Weekly Activity</h2>
+            <Badge variant="purple" size="sm">This Week</Badge>
+          </div>
+          <ResponsiveContainer width="100%" height={250}>
+            <RechartsBarChart data={weeklyActivityData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="day" stroke="#6b7280" />
+              <YAxis stroke="#6b7280" />
+              <Tooltip 
+                contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }}
+              />
+              <Legend />
+              <Bar dataKey="lessons" stackId="a" fill="#3b82f6" name="Lessons" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="theory" stackId="a" fill="#10b981" name="Theory" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="practice" stackId="a" fill="#f59e0b" name="Practice" radius={[4, 4, 0, 0]} />
+            </RechartsBarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

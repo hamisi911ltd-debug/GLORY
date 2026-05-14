@@ -284,6 +284,53 @@ export function registerPaymentRoutes(router) {
       return badRequest(error.message);
     }
   });
+
+  /**
+   * PUT /api/payments/:id
+   * Update payment details (admin/finance only)
+   */
+  router.put("/api/payments/:id", async (req, env) => {
+    const auth = await authenticate(req.raw, env);
+    if (auth.error) return auth.error;
+
+    const roleCheck = await checkRole(auth.user.id, env, "super_admin", "branch_admin", "finance");
+    if (roleCheck) return roleCheck;
+
+    try {
+      const updates = req.body || {};
+      delete updates.id;
+      delete updates.created_at;
+
+      await PaymentService.update(env.DB, req.params.id, updates);
+      const payment = await PaymentService.findById(env.DB, req.params.id);
+
+      return ok({
+        message: "Payment updated successfully",
+        payment
+      });
+    } catch (error) {
+      return badRequest(error.message);
+    }
+  });
+
+  /**
+   * DELETE /api/payments/:id
+   * Delete payment (admin only)
+   */
+  router.delete("/api/payments/:id", async (req, env) => {
+    const auth = await authenticate(req.raw, env);
+    if (auth.error) return auth.error;
+
+    const roleCheck = await checkRole(auth.user.id, env, "super_admin", "branch_admin");
+    if (roleCheck) return roleCheck;
+
+    try {
+      await PaymentService.delete(env.DB, req.params.id);
+      return ok({ message: "Payment deleted successfully" });
+    } catch (error) {
+      return badRequest(error.message);
+    }
+  });
 }
 
     const admin = getAdminClient(env);

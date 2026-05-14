@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { CreditCard, Smartphone, Download, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
+import { CreditCard, Smartphone, Download, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -28,15 +28,6 @@ interface Payment {
   ref: string;
 }
 
-const payments: Payment[] = [
-  { id: "1", date: "5 May 2026", description: "Course enrolment — Car (Standard)", amount: 11500, method: "mpesa", status: "paid", ref: "QHJ7K2L9" },
-  { id: "2", date: "7 May 2026", description: "Lesson #1 — James Mwangi", amount: 500, method: "mpesa", status: "paid", ref: "QHJ8M3N1" },
-  { id: "3", date: "9 May 2026", description: "Lesson #2 — James Mwangi", amount: 500, method: "card", status: "paid", ref: "PI_3NxK" },
-  { id: "4", date: "12 May 2026", description: "Lesson #3 — Grace Wanjiru", amount: 500, method: "cash", status: "paid", ref: "CASH-042" },
-  { id: "5", date: "14 May 2026", description: "Lesson #4 — James Mwangi", amount: 500, method: "mpesa", status: "pending", ref: "—" },
-  { id: "6", date: "16 May 2026", description: "Lesson #5 — Grace Wanjiru", amount: 500, method: "card", status: "failed", ref: "—" },
-];
-
 const methodConfig: Record<PayMethod, { label: string; color: string }> = {
   mpesa: { label: "M-Pesa", color: "bg-success-light text-success" },
   card: { label: "Card", color: "bg-info-light text-info" },
@@ -51,7 +42,7 @@ const statusConfig: Record<PayStatus, { label: string; icon: any; variant: "succ
 
 type PayModal = "mpesa" | "card" | null;
 
-function MpesaModal({ onClose }: { onClose: () => void }) {
+function MpesaModal({ onClose, outstanding }: { onClose: () => void; outstanding: number }) {
   const [phone, setPhone] = useState("07");
   const [state, setState] = useState<"input" | "waiting" | "success">("input");
 
@@ -75,7 +66,10 @@ function MpesaModal({ onClose }: { onClose: () => void }) {
               <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0712 345 678" />
             </div>
             <div className="mt-4 rounded-lg bg-surface-1 p-3 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-semibold">KES 3,500</span></div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount due</span>
+                <span className="font-semibold">KES {outstanding.toLocaleString()}</span>
+              </div>
             </div>
             <div className="mt-5 flex gap-3">
               <Button variant="secondary" size="lg" className="flex-1" onClick={onClose}>Cancel</Button>
@@ -87,7 +81,9 @@ function MpesaModal({ onClose }: { onClose: () => void }) {
           <div className="py-6 text-center">
             <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-border border-t-success" />
             <h2 className="mt-5 text-h2 text-navy">Check your phone</h2>
-            <p className="mt-2 text-sm text-muted-foreground">An M-Pesa prompt has been sent to <strong>{phone}</strong>. Enter your PIN to complete payment.</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              An M-Pesa prompt has been sent to <strong>{phone}</strong>. Enter your PIN to complete payment.
+            </p>
           </div>
         )}
         {state === "success" && (
@@ -96,7 +92,9 @@ function MpesaModal({ onClose }: { onClose: () => void }) {
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <h2 className="mt-5 text-h2 text-navy">Payment received!</h2>
-            <p className="mt-2 text-sm text-muted-foreground">KES 3,500 confirmed. A receipt has been sent to your phone and email.</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              KES {outstanding.toLocaleString()} confirmed. A receipt has been sent to your phone and email.
+            </p>
             <Button variant="primary" size="lg" className="mt-6 w-full" onClick={onClose}>Done</Button>
           </div>
         )}
@@ -109,96 +107,106 @@ function PaymentsPage() {
   const { user } = useAuth();
   const [modal, setModal] = useState<PayModal>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [balance, setBalance] = useState(3500);
+  const [coursePrice, setCoursePrice] = useState(0);
+  const [totalPaid, setTotalPaid] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Load payments and balance with real-time updates
+  // Balance = course price − total confirmed payments
+  const outstanding = Math.max(0, coursePrice - totalPaid);
+
+  const loadPayments = async () => {
+    if (!user) return;
+    try {
+      // Get student record with course price
+      const { data: student } = await supabase
+        .from("students")
+        .select("id, course_id, courses(price)")
+        .eq("user_id", user.id)
+        .single();
+
+      if (student) {
+        const price = (student as any).courses?.price ?? 0;
+        setCoursePrice(price);
+
+        // Fetch all payments for this student
+        const { data: paymentData } = await supabase
+          .from("payments")
+          .select("*")
+          .eq("student_id", student.id)
+          .order("created_at", { ascending: false });
+
+        if (paymentData) {
+          const formatted: Payment[] = paymentData.map((p: any) => ({
+            id: p.id,
+            date: new Date(p.created_at).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            }),
+            description: p.description ?? "Payment",
+            amount: p.amount,
+            method: (p.payment_method ?? "cash") as PayMethod,
+            // Supabase backend uses "completed"; normalise to "paid" for UI
+            status: (p.status === "completed" ? "paid" : p.status) as PayStatus,
+            ref: p.payment_reference ?? "—",
+          }));
+          setPayments(formatted);
+
+          // Only count confirmed payments toward balance calculation
+          const paid = formatted
+            .filter((p) => p.status === "paid")
+            .reduce((acc, p) => acc + p.amount, 0);
+          setTotalPaid(paid);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load payments:", error);
+      toast.error("Failed to load payment data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
+    loadPayments();
     if (!user) return;
 
-    const loadPayments = async () => {
-      try {
-        // Get student record first
-        const { data: student } = await supabase
-          .from("students")
-          .select("id, total_paid, balance")
-          .eq("user_id", user.id)
-          .single();
-
-        if (student) {
-          setBalance(student.balance);
-
-          // Get payments
-          const { data: paymentData } = await supabase
-            .from("payments")
-            .select("*")
-            .eq("student_id", student.id)
-            .order("created_at", { ascending: false });
-
-          if (paymentData) {
-            const formattedPayments = paymentData.map(p => ({
-              id: p.id,
-              date: new Date(p.created_at).toLocaleDateString("en-GB"),
-              description: p.description,
-              amount: p.amount,
-              method: p.payment_method as PayMethod,
-              status: p.status as PayStatus,
-              ref: p.payment_reference || "—",
-            }));
-            setPayments(formattedPayments);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load payments:", error);
-        toast.error("Failed to load payment data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPayments();
-
-    // Subscribe to real-time updates
     const channel = supabase
       .channel(`payments_${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, (payload) => {
-        // Reload payments when changes occur
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => {
         loadPayments();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "students" }, (payload) => {
-        // Update balance when student record changes
-        if (payload.new && payload.new.user_id === user.id) {
-          setBalance(payload.new.balance);
-        }
       })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-border border-t-brand" />
+      </div>
+    );
+  }
+
+  const paidPercent = coursePrice > 0 ? Math.min(100, Math.round((totalPaid / coursePrice) * 100)) : 0;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-10">
-      <h1 className="text-h1 text-navy">Payments & Invoices</h1>
+      <h1 className="text-h1 text-navy">Payments &amp; Invoices</h1>
       <p className="mt-1 text-sm text-muted-foreground">Track your payments and download receipts.</p>
 
       {/* Balance card */}
       <div className="mt-8 rounded-2xl bg-brand p-6 text-white">
-        <p className="text-sm opacity-90">Amount due</p>
-        <p className="mt-2 text-4xl font-bold">KES {balance.toLocaleString()}</p>
-        <p className="mt-1 text-sm opacity-75">{payments.filter(p => p.status === "paid").length} payments received</p>
-        <Button variant="hero" size="lg" className="mt-5 bg-white text-brand hover:bg-white/90" onClick={() => setModal("mpesa")}>
-          <Smartphone className="mr-1.5 h-4 w-4" /> Pay now
-        </Button>
-      </div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-label-sm text-white/70">Outstanding balance</p>
-            <p className="mt-1 text-display-lg font-bold">KES {outstanding.toLocaleString()}</p>
-            <p className="mt-1 text-sm text-white/70">Total paid: KES {totalPaid.toLocaleString()}</p>
+            <p className="mt-1 text-4xl font-bold">KES {outstanding.toLocaleString()}</p>
+            <p className="mt-1 text-sm text-white/70">
+              Paid: KES {totalPaid.toLocaleString()} &nbsp;·&nbsp; Course fee: KES {coursePrice.toLocaleString()}
+            </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button
               variant="secondary"
               size="lg"
@@ -217,6 +225,22 @@ function PaymentsPage() {
             </Button>
           </div>
         </div>
+
+        {/* Payment progress bar */}
+        {coursePrice > 0 && (
+          <div className="mt-5">
+            <div className="flex justify-between text-xs text-white/70 mb-1">
+              <span>{paidPercent}% paid</span>
+              <span>{100 - paidPercent}% remaining</span>
+            </div>
+            <div className="h-2 rounded-full bg-white/20">
+              <div
+                className="h-2 rounded-full bg-white transition-all duration-500"
+                style={{ width: `${paidPercent}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Payment history */}
@@ -237,48 +261,56 @@ function PaymentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {payments.map((p) => {
-                  const method = methodConfig[p.method];
-                  const status = statusConfig[p.status];
-                  const StatusIcon = status.icon;
-                  return (
-                    <tr key={p.id} className="hover:bg-surface-1 transition-colors">
-                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{p.date}</td>
-                      <td className="px-4 py-3 text-foreground">{p.description}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-navy whitespace-nowrap">
-                        KES {p.amount.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", method.color)}>
-                          {method.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={status.variant} size="sm" className="gap-1">
-                          <StatusIcon className="h-3 w-3" /> {status.label}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.ref}</td>
-                      <td className="px-4 py-3">
-                        {p.status === "paid" && (
-                          <button
-                            onClick={() => toast.success("Receipt downloaded")}
-                            className="flex items-center gap-1 text-xs text-brand-blue hover:underline"
-                          >
-                            <Download className="h-3.5 w-3.5" /> Receipt
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {payments.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                      No payments recorded yet.
+                    </td>
+                  </tr>
+                ) : (
+                  payments.map((p) => {
+                    const method = methodConfig[p.method] ?? methodConfig.cash;
+                    const status = statusConfig[p.status] ?? statusConfig.pending;
+                    const StatusIcon = status.icon;
+                    return (
+                      <tr key={p.id} className="hover:bg-surface-1 transition-colors">
+                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{p.date}</td>
+                        <td className="px-4 py-3 text-foreground">{p.description}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-navy whitespace-nowrap">
+                          KES {p.amount.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", method.color)}>
+                            {method.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={status.variant} size="sm" className="gap-1">
+                            <StatusIcon className="h-3 w-3" /> {status.label}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.ref}</td>
+                        <td className="px-4 py-3">
+                          {p.status === "paid" && (
+                            <button
+                              onClick={() => toast.success("Receipt downloaded")}
+                              className="flex items-center gap-1 text-xs text-brand-blue hover:underline"
+                            >
+                              <Download className="h-3.5 w-3.5" /> Receipt
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      {modal === "mpesa" && <MpesaModal onClose={() => setModal(null)} />}
+      {modal === "mpesa" && <MpesaModal onClose={() => setModal(null)} outstanding={outstanding} />}
     </div>
   );
 }
