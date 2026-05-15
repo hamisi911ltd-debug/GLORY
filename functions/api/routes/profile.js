@@ -1,4 +1,4 @@
-import { getAdminClient } from "../lib/supabase.js";
+import { UserService, hashPassword } from "../lib/database.js";
 import { authenticate } from "../lib/auth.js";
 import { ok, badRequest, notFound } from "../lib/response.js";
 
@@ -10,20 +10,18 @@ export function registerProfileRoutes(router) {
     const auth = await authenticate(req.raw, env);
     if (auth.error) return auth.error;
 
-    const admin = getAdminClient(env);
-    const { data, error } = await admin
-      .from("profiles")
-      .select("*")
-      .eq("id", auth.user.id)
-      .single();
-
-    if (error) return notFound("Profile not found");
-    return ok({ profile: data });
+    try {
+      const user = await UserService.findById(env.DB, auth.user.id);
+      if (!user) return notFound("Profile not found");
+      return ok({ profile: user });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   /**
    * PATCH /api/profile
-   * Updates profile including avatar_url (can be set from Supabase storage)
+   * Updates profile including avatar_url
    */
   router.patch("/api/profile", async (req, env) => {
     const auth = await authenticate(req.raw, env);
@@ -33,29 +31,16 @@ export function registerProfileRoutes(router) {
     const updates = { updated_at: new Date().toISOString() };
     if (full_name !== undefined) updates.full_name = full_name;
     if (phone !== undefined) updates.phone = phone;
-    if (branch_id !== undefined) updates.branch_id = branch_id;
     if (avatar_url !== undefined) updates.avatar_url = avatar_url;
-    if (date_of_birth !== undefined) updates.date_of_birth = date_of_birth;
-    if (national_id !== undefined) updates.national_id = national_id;
-
-    const admin = getAdminClient(env);
-    const { data, error } = await admin
-      .from("profiles")
-      .update(updates)
-      .eq("id", auth.user.id)
-      .select()
-      .single();
-
-    if (error) return badRequest(error.message);
+    // Note: D1 schema might use different field names, ensure consistency with schema.sql
     
-    // Broadcast real-time update
-    await admin
-      .from("profiles")
-      .on("*", { event: "UPDATE", schema: "public", table: "profiles" })
-      .eq("id", auth.user.id)
-      .subscribe();
-
-    return ok({ profile: data });
+    try {
+      await UserService.update(env.DB, auth.user.id, updates);
+      const updatedUser = await UserService.findById(env.DB, auth.user.id);
+      return ok({ profile: updatedUser });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   /**
@@ -70,13 +55,13 @@ export function registerProfileRoutes(router) {
       return badRequest("Password must be at least 6 characters");
     }
 
-    const admin = getAdminClient(env);
-    const { error } = await admin.auth.admin.updateUserById(auth.user.id, {
-      password: newPassword,
-    });
-
-    if (error) return badRequest(error.message);
-    return ok({ message: "Password updated successfully" });
+    try {
+      const passwordHash = await hashPassword(newPassword);
+      await UserService.update(env.DB, auth.user.id, { password_hash: passwordHash });
+      return ok({ message: "Password updated successfully" });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   /**

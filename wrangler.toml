@@ -1,0 +1,9 @@
+name = "driveschool-pro"
+compatibility_date = "2025-05-10"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "./dist/client"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "driveschool-pro"
+database_id = "your-database-id-here"

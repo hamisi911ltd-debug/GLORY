@@ -25,6 +25,7 @@ import { Route as AuthenticatedBookRouteImport } from './routes/_authenticated/b
 import { Route as AuthenticatedStaffIndexRouteImport } from './routes/_authenticated/staff/index'
 import { Route as AuthenticatedSuperadminUsersRouteImport } from './routes/_authenticated/superadmin/users'
 import { Route as AuthenticatedSuperadminDashboardRouteImport } from './routes/_authenticated/superadmin/dashboard'
+import { Route as AuthenticatedSuperadminCoursesRouteImport } from './routes/_authenticated/superadmin/courses'
 import { Route as AuthenticatedStaffStudentsRouteImport } from './routes/_authenticated/staff/students'
 import { Route as AuthenticatedStaffInstructorRouteImport } from './routes/_authenticated/staff/instructor'
 import { Route as AuthenticatedStaffFleetRouteImport } from './routes/_authenticated/staff/fleet'
@@ -114,6 +115,12 @@ const AuthenticatedSuperadminDashboardRoute =
     path: '/superadmin/dashboard',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedSuperadminCoursesRoute =
+  AuthenticatedSuperadminCoursesRouteImport.update({
+    id: '/superadmin/courses',
+    path: '/superadmin/courses',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedStaffStudentsRoute =
   AuthenticatedStaffStudentsRouteImport.update({
     id: '/staff/students',
@@ -169,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/staff/fleet': typeof AuthenticatedStaffFleetRoute
   '/staff/instructor': typeof AuthenticatedStaffInstructorRoute
   '/staff/students': typeof AuthenticatedStaffStudentsRoute
+  '/superadmin/courses': typeof AuthenticatedSuperadminCoursesRoute
   '/superadmin/dashboard': typeof AuthenticatedSuperadminDashboardRoute
   '/superadmin/users': typeof AuthenticatedSuperadminUsersRoute
   '/staff/': typeof AuthenticatedStaffIndexRoute
@@ -192,6 +200,7 @@ export interface FileRoutesByTo {
   '/staff/fleet': typeof AuthenticatedStaffFleetRoute
   '/staff/instructor': typeof AuthenticatedStaffInstructorRoute
   '/staff/students': typeof AuthenticatedStaffStudentsRoute
+  '/superadmin/courses': typeof AuthenticatedSuperadminCoursesRoute
   '/superadmin/dashboard': typeof AuthenticatedSuperadminDashboardRoute
   '/superadmin/users': typeof AuthenticatedSuperadminUsersRoute
   '/staff': typeof AuthenticatedStaffIndexRoute
@@ -217,6 +226,7 @@ export interface FileRoutesById {
   '/_authenticated/staff/fleet': typeof AuthenticatedStaffFleetRoute
   '/_authenticated/staff/instructor': typeof AuthenticatedStaffInstructorRoute
   '/_authenticated/staff/students': typeof AuthenticatedStaffStudentsRoute
+  '/_authenticated/superadmin/courses': typeof AuthenticatedSuperadminCoursesRoute
   '/_authenticated/superadmin/dashboard': typeof AuthenticatedSuperadminDashboardRoute
   '/_authenticated/superadmin/users': typeof AuthenticatedSuperadminUsersRoute
   '/_authenticated/staff/': typeof AuthenticatedStaffIndexRoute
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/staff/fleet'
     | '/staff/instructor'
     | '/staff/students'
+    | '/superadmin/courses'
     | '/superadmin/dashboard'
     | '/superadmin/users'
     | '/staff/'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/staff/fleet'
     | '/staff/instructor'
     | '/staff/students'
+    | '/superadmin/courses'
     | '/superadmin/dashboard'
     | '/superadmin/users'
     | '/staff'
@@ -289,6 +301,7 @@ export interface FileRouteTypes {
     | '/_authenticated/staff/fleet'
     | '/_authenticated/staff/instructor'
     | '/_authenticated/staff/students'
+    | '/_authenticated/superadmin/courses'
     | '/_authenticated/superadmin/dashboard'
     | '/_authenticated/superadmin/users'
     | '/_authenticated/staff/'
@@ -416,6 +429,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSuperadminDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/superadmin/courses': {
+      id: '/_authenticated/superadmin/courses'
+      path: '/superadmin/courses'
+      fullPath: '/superadmin/courses'
+      preLoaderRoute: typeof AuthenticatedSuperadminCoursesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/staff/students': {
       id: '/_authenticated/staff/students'
       path: '/staff/students'
@@ -476,6 +496,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedStaffFleetRoute: typeof AuthenticatedStaffFleetRoute
   AuthenticatedStaffInstructorRoute: typeof AuthenticatedStaffInstructorRoute
   AuthenticatedStaffStudentsRoute: typeof AuthenticatedStaffStudentsRoute
+  AuthenticatedSuperadminCoursesRoute: typeof AuthenticatedSuperadminCoursesRoute
   AuthenticatedSuperadminDashboardRoute: typeof AuthenticatedSuperadminDashboardRoute
   AuthenticatedSuperadminUsersRoute: typeof AuthenticatedSuperadminUsersRoute
   AuthenticatedStaffIndexRoute: typeof AuthenticatedStaffIndexRoute
@@ -496,6 +517,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedStaffFleetRoute: AuthenticatedStaffFleetRoute,
   AuthenticatedStaffInstructorRoute: AuthenticatedStaffInstructorRoute,
   AuthenticatedStaffStudentsRoute: AuthenticatedStaffStudentsRoute,
+  AuthenticatedSuperadminCoursesRoute: AuthenticatedSuperadminCoursesRoute,
   AuthenticatedSuperadminDashboardRoute: AuthenticatedSuperadminDashboardRoute,
   AuthenticatedSuperadminUsersRoute: AuthenticatedSuperadminUsersRoute,
   AuthenticatedStaffIndexRoute: AuthenticatedStaffIndexRoute,

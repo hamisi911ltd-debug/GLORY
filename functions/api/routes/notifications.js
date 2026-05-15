@@ -1,4 +1,4 @@
-import { getAdminClient } from "../lib/supabase.js";
+import { NotificationService } from "../lib/database.js";
 import { authenticate } from "../lib/auth.js";
 import { ok, badRequest } from "../lib/response.js";
 
@@ -10,21 +10,16 @@ export function registerNotificationRoutes(router) {
     const auth = await authenticate(req.raw, env);
     if (auth.error) return auth.error;
 
-    const { read, limit = "20" } = req.query;
-    const admin = getAdminClient(env);
+    try {
+      const { read, limit = "20" } = req.query;
+      const filters = {};
+      if (read !== undefined) filters.read_status = (read === "true");
 
-    let query = admin
-      .from("notifications")
-      .select("*")
-      .eq("user_id", auth.user.id)
-      .order("created_at", { ascending: false })
-      .limit(Number(limit));
-
-    if (read !== undefined) query = query.eq("read", read === "true");
-
-    const { data, error } = await query;
-    if (error) return badRequest(error.message);
-    return ok({ notifications: data ?? [] });
+      const notifications = await NotificationService.list(env.DB, auth.user.id, filters);
+      return ok({ notifications: notifications.slice(0, Number(limit)) });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   /**
@@ -34,17 +29,12 @@ export function registerNotificationRoutes(router) {
     const auth = await authenticate(req.raw, env);
     if (auth.error) return auth.error;
 
-    const admin = getAdminClient(env);
-    const { data, error } = await admin
-      .from("notifications")
-      .update({ read: true })
-      .eq("id", req.params.id)
-      .eq("user_id", auth.user.id)
-      .select()
-      .single();
-
-    if (error) return badRequest(error.message);
-    return ok({ notification: data });
+    try {
+      await NotificationService.markAsRead(env.DB, req.params.id, auth.user.id);
+      return ok({ message: "Notification marked as read" });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   /**
@@ -54,14 +44,11 @@ export function registerNotificationRoutes(router) {
     const auth = await authenticate(req.raw, env);
     if (auth.error) return auth.error;
 
-    const admin = getAdminClient(env);
-    const { error } = await admin
-      .from("notifications")
-      .update({ read: true })
-      .eq("user_id", auth.user.id)
-      .eq("read", false);
-
-    if (error) return badRequest(error.message);
-    return ok({ message: "All notifications marked as read" });
+    try {
+      await NotificationService.markAllAsRead(env.DB, auth.user.id);
+      return ok({ message: "All notifications marked as read" });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 }

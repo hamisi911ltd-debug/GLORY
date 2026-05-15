@@ -345,7 +345,7 @@ function FinanceDashboard() {
                     <AlertTriangle className="h-5 w-5 text-danger" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Critical (>21 days)</p>
+                    <p className="text-sm text-muted-foreground">Critical (&gt;21 days)</p>
                     <p className="text-h3 font-bold text-danger">
                       {balances.filter(p => p.daysOverdue > 21).length} students
                     </p>
@@ -371,7 +371,7 @@ function FinanceDashboard() {
                     <User className="h-5 w-5 text-info" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Recent (<14 days)</p>
+                    <p className="text-sm text-muted-foreground">Recent (&lt;14 days)</p>
                     <p className="text-h3 font-bold text-info">
                       {balances.filter(p => p.daysOverdue <= 14).length} students
                     </p>

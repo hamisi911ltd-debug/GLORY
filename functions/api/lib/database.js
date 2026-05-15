@@ -623,3 +623,79 @@ export const BranchService = {
     return await executeQueryFirst(db, query, [id]);
   }
 };
+
+/**
+ * Vehicle Management Functions
+ */
+export const VehicleService = {
+  async list(db, filters = {}) {
+    let query = `SELECT * FROM vehicles WHERE 1=1`;
+    const params = [];
+
+    if (filters.branch_id) {
+      query += ` AND branch_id = ?`;
+      params.push(filters.branch_id);
+    }
+    if (filters.status) {
+      query += ` AND status = ?`;
+      params.push(filters.status);
+    }
+
+    query += ` ORDER BY plate_number`;
+    const result = await executeQuery(db, query, params);
+    return result.results || [];
+  },
+
+  async create(db, vehicleData) {
+    const id = generateId();
+    const query = `
+      INSERT INTO vehicles (id, branch_id, plate_number, make, model, year, vehicle_type, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    await executeUpdate(db, query, [
+      id,
+      vehicleData.branch_id,
+      vehicleData.plate_number,
+      vehicleData.make,
+      vehicleData.model,
+      vehicleData.year,
+      vehicleData.vehicle_type,
+      vehicleData.status || 'active'
+    ]);
+    return { id, ...vehicleData };
+  },
+
+  async update(db, id, updates) {
+    const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+    const values = Object.values(updates);
+    const query = `UPDATE vehicles SET ${fields} WHERE id = ?`;
+    return await executeUpdate(db, query, [...values, id]);
+  }
+};
+
+/**
+ * Instructor Management Functions
+ */
+export const InstructorService = {
+  async list(db, filters = {}) {
+    let query = `
+      SELECT i.*, u.full_name, u.email, u.phone, b.name as branch_name
+      FROM instructors i
+      LEFT JOIN users u ON i.user_id = u.id
+      LEFT JOIN branches b ON i.branch_id = b.id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (filters.branch_id) {
+      query += ` AND i.branch_id = ?`;
+      params.push(filters.branch_id);
+    }
+    const result = await executeQuery(db, query, params);
+    return result.results || [];
+  },
+
+  async findByUserId(db, userId) {
+    const query = `SELECT * FROM instructors WHERE user_id = ?`;
+    return await executeQueryFirst(db, query, [userId]);
+  }
+};

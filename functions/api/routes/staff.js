@@ -1,4 +1,4 @@
-import { getAdminClient } from "../lib/supabase.js";
+import { StudentService, PaymentService, LessonService, VehicleService, InstructorService, BranchService, UserService } from "../lib/database.js";
 import { authenticate, checkRole } from "../lib/auth.js";
 import { ok, created, badRequest, notFound } from "../lib/response.js";
 
@@ -15,38 +15,36 @@ export function registerStaffRoutes(router) {
     const denied = await checkRole(auth.user.id, env, "branch_admin", "super_admin");
     if (denied) return denied;
 
-    const admin = getAdminClient(env);
-    const monthStart = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1,
-    ).toISOString();
-    const todayStart = new Date().toISOString().split("T")[0];
+    try {
+      const monthStart = new Date(
+        new Date().getFullYear(),
+        new Date().getMonth(),
+        1,
+      ).toISOString();
+      const todayStart = new Date().toISOString().split("T")[0];
 
-    const [studentsRes, lessonsRes, paymentsRes, vehiclesRes] = await Promise.all([
-      admin.from("students").select("id", { count: "exact", head: true }),
-      admin
-        .from("lessons")
-        .select("id", { count: "exact", head: true })
-        .gte("scheduled_at", todayStart),
-      admin
-        .from("payments")
-        .select("amount")
-        .eq("status", "paid")
-        .gte("created_at", monthStart),
-      admin.from("vehicles").select("id, status"),
-    ]);
+      // Use D1 queries instead of Supabase
+      const [students, lessonsToday, paymentsMonth, vehicles] = await Promise.all([
+        StudentService.list(env.DB),
+        LessonService.list(env.DB, { date: todayStart }),
+        PaymentService.list(env.DB, { status: 'completed' }), // We'll filter by date in JS for simplicity or add it to service
+        VehicleService.list(env.DB),
+      ]);
 
-    const revenue = (paymentsRes.data ?? []).reduce((s, p) => s + (p.amount || 0), 0);
-    const vehicles = vehiclesRes.data ?? [];
+      const revenue = paymentsMonth
+        .filter(p => p.created_at >= monthStart)
+        .reduce((s, p) => s + (p.amount || 0), 0);
 
-    return ok({
-      activeStudents: studentsRes.count ?? 0,
-      lessonsToday: lessonsRes.count ?? 0,
-      revenueThisMonth: revenue,
-      vehiclesAvailable: vehicles.filter((v) => v.status === "available").length,
-      vehiclesTotal: vehicles.length,
-    });
+      return ok({
+        activeStudents: students.length,
+        lessonsToday: lessonsToday.length,
+        revenueThisMonth: revenue,
+        vehiclesAvailable: vehicles.filter((v) => v.status === "active" || v.status === "available").length,
+        vehiclesTotal: vehicles.length,
+      });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   // ── Fleet ───────────────────────────────────────────────────────────────────
@@ -61,10 +59,12 @@ export function registerStaffRoutes(router) {
     const denied = await checkRole(auth.user.id, env, "branch_admin", "super_admin");
     if (denied) return denied;
 
-    const admin = getAdminClient(env);
-    const { data, error } = await admin.from("vehicles").select("*").order("plate");
-    if (error) return badRequest(error.message);
-    return ok({ vehicles: data ?? [] });
+    try {
+      const vehicles = await VehicleService.list(env.DB);
+      return ok({ vehicles });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   /**
@@ -77,18 +77,23 @@ export function registerStaffRoutes(router) {
     const denied = await checkRole(auth.user.id, env, "branch_admin", "super_admin");
     if (denied) return denied;
 
-    const { plate, type, year, branch_id } = req.body ?? {};
+    const { plate, type, year, branch_id, make, model } = req.body ?? {};
     if (!plate || !type) return badRequest("plate and type are required");
 
-    const admin = getAdminClient(env);
-    const { data, error } = await admin
-      .from("vehicles")
-      .insert({ plate, type, year, branch_id, status: "available" })
-      .select()
-      .single();
-
-    if (error) return badRequest(error.message);
-    return created({ vehicle: data });
+    try {
+      const vehicle = await VehicleService.create(env.DB, {
+        plate_number: plate,
+        vehicle_type: type,
+        year: year || new Date().getFullYear(),
+        branch_id,
+        make: make || "Generic",
+        model: model || "Model",
+        status: "active"
+      });
+      return created({ vehicle });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   /**
@@ -104,18 +109,14 @@ export function registerStaffRoutes(router) {
     const { status, last_service_at } = req.body ?? {};
     const updates = {};
     if (status)          updates.status          = status;
-    if (last_service_at) updates.last_service_at = last_service_at;
+    if (last_service_at) updates.last_service_date = last_service_at;
 
-    const admin = getAdminClient(env);
-    const { data, error } = await admin
-      .from("vehicles")
-      .update(updates)
-      .eq("id", req.params.id)
-      .select()
-      .single();
-
-    if (error) return badRequest(error.message);
-    return ok({ vehicle: data });
+    try {
+      await VehicleService.update(env.DB, req.params.id, updates);
+      return ok({ message: "Vehicle updated" });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   // ── Instructor ──────────────────────────────────────────────────────────────
@@ -130,26 +131,20 @@ export function registerStaffRoutes(router) {
     const denied = await checkRole(auth.user.id, env, "instructor", "branch_admin", "super_admin");
     if (denied) return denied;
 
-    const admin = getAdminClient(env);
-    const { data: instructor } = await admin
-      .from("instructors")
-      .select("id")
-      .eq("user_id", auth.user.id)
-      .single();
+    try {
+      const instructor = await InstructorService.findByUserId(env.DB, auth.user.id);
+      if (!instructor) return notFound("Instructor record not found");
 
-    if (!instructor) return notFound("Instructor record not found");
+      const today = new Date().toISOString().split("T")[0];
+      const lessons = await LessonService.list(env.DB, {
+        instructor_id: instructor.id,
+        date: today
+      });
 
-    const today = new Date().toISOString().split("T")[0];
-    const { data, error } = await admin
-      .from("lessons")
-      .select("*, student:students(id, user:profiles(full_name)), vehicle:vehicles(plate, type)")
-      .eq("instructor_id", instructor.id)
-      .gte("scheduled_at", `${today}T00:00:00`)
-      .lte("scheduled_at", `${today}T23:59:59`)
-      .order("scheduled_at");
-
-    if (error) return badRequest(error.message);
-    return ok({ lessons: data ?? [] });
+      return ok({ lessons });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   // ── Examiner ────────────────────────────────────────────────────────────────
@@ -164,15 +159,12 @@ export function registerStaffRoutes(router) {
     const denied = await checkRole(auth.user.id, env, "examiner", "super_admin");
     if (denied) return denied;
 
-    const admin = getAdminClient(env);
-    const { data, error } = await admin
-      .from("students")
-      .select("*, user:profiles(full_name), course:courses(name, vehicle_type)")
-      .eq("exam_ready", false)
-      .order("enrolled_at");
-
-    if (error) return badRequest(error.message);
-    return ok({ students: data ?? [] });
+    try {
+      const students = await StudentService.list(env.DB, { exam_ready: false });
+      return ok({ students });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   /**
@@ -190,16 +182,15 @@ export function registerStaffRoutes(router) {
       return badRequest("mock_score and exam_ready are required");
     }
 
-    const admin = getAdminClient(env);
-    const { data, error } = await admin
-      .from("students")
-      .update({ exam_ready, progress_pct: mock_score })
-      .eq("id", req.params.studentId)
-      .select()
-      .single();
-
-    if (error) return badRequest(error.message);
-    return ok({ student: data });
+    try {
+      await StudentService.updateProgress(env.DB, req.params.studentId, {
+        exam_ready,
+        progress_percentage: mock_score
+      });
+      return ok({ message: "Student assessment updated" });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   // ── Super Admin ─────────────────────────────────────────────────────────────
@@ -214,33 +205,36 @@ export function registerStaffRoutes(router) {
     const denied = await checkRole(auth.user.id, env, "super_admin");
     if (denied) return denied;
 
-    const admin = getAdminClient(env);
-    const monthStart = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1,
-    ).toISOString();
+    try {
+      const monthStart = new Date(
+        new Date().getFullYear(),
+        new Date().getMonth(),
+        1,
+      ).toISOString();
 
-    const [studentsRes, revenueRes, lessonsRes, instructorsRes, branchesRes, certsRes] =
-      await Promise.all([
-        admin.from("students").select("id", { count: "exact", head: true }),
-        admin.from("payments").select("amount").eq("status", "paid").gte("created_at", monthStart),
-        admin.from("lessons").select("id", { count: "exact", head: true }).eq("status", "in-progress"),
-        admin.from("instructors").select("id", { count: "exact", head: true }),
-        admin.from("branches").select("id", { count: "exact", head: true }),
-        admin.from("certificates").select("id", { count: "exact", head: true }),
+      const [students, payments, lessons, instructors, branches] = await Promise.all([
+        StudentService.list(env.DB),
+        PaymentService.list(env.DB, { status: 'completed' }),
+        LessonService.list(env.DB, { status: 'in-progress' }),
+        InstructorService.list(env.DB),
+        BranchService.list(env.DB),
       ]);
 
-    const revenueMTD = (revenueRes.data ?? []).reduce((s, p) => s + (p.amount || 0), 0);
+      const revenueMTD = payments
+        .filter(p => p.created_at >= monthStart)
+        .reduce((s, p) => s + (p.amount || 0), 0);
 
-    return ok({
-      totalStudents:       studentsRes.count   ?? 0,
-      revenueMTD,
-      activeLessonsNow:    lessonsRes.count    ?? 0,
-      registeredInstructors: instructorsRes.count ?? 0,
-      branchesOnline:      branchesRes.count   ?? 0,
-      certificatesIssued:  certsRes.count      ?? 0,
-    });
+      return ok({
+        totalStudents:         students.length,
+        revenueMTD,
+        activeLessonsNow:      lessons.length,
+        registeredInstructors: instructors.length,
+        branchesOnline:        branches.length,
+        certificatesIssued:    0, // TODO: Implement certificates
+      });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 
   /**
@@ -254,13 +248,18 @@ export function registerStaffRoutes(router) {
     const denied = await checkRole(auth.user.id, env, "super_admin");
     if (denied) return denied;
 
-    const admin = getAdminClient(env);
-    const { data, error } = await admin
-      .from("profiles")
-      .select("*, user_roles(role)")
-      .order("created_at", { ascending: false });
+    try {
+      const users = await env.DB.prepare(`
+        SELECT u.*, GROUP_CONCAT(ur.role) as roles
+        FROM users u
+        LEFT JOIN user_roles ur ON u.id = ur.user_id
+        GROUP BY u.id
+        ORDER BY u.created_at DESC
+      `).all();
 
-    if (error) return badRequest(error.message);
-    return ok({ users: data ?? [] });
+      return ok({ users: users.results || [] });
+    } catch (error) {
+      return badRequest(error.message);
+    }
   });
 }
