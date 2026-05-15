@@ -1,4 +1,4 @@
-import jwt from '@tuxcode/cloudflare-worker-jwt';
+import jwt from '@tsndr/cloudflare-worker-jwt';
 import { UserService, generateId } from "./database.js";
 import { unauthorized, badRequest, forbidden, serverError } from "./response.js";
 
