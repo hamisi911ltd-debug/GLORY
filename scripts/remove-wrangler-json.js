@@ -1,21 +1,11 @@
-import { rmSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-// The @cloudflare/vite-plugin generates a wrangler.json inside dist/client
-// during build. This conflicts with the root wrangler.toml and causes
-// Cloudflare Pages to crash. Remove it after every build.
-const filesToRemove = [
-  join(__dirname, "..", "dist", "client", "wrangler.json"),
-  join(__dirname, "..", "dist", "client", "wrangler.toml"),
-];
-
-for (const file of filesToRemove) {
-  if (existsSync(file)) {
-    rmSync(file, { force: true });
-    console.log(`✅ Removed ${file}`);
-  }
-}
-console.log("✅ Post-build cleanup complete");
+/**
+ * Post-build cleanup script.
+ *
+ * Previously this deleted dist/client/wrangler.json, but that file is
+ * required by Cloudflare Pages — it is the deploy config that the
+ * @cloudflare/vite-plugin generates and Cloudflare reads at deploy time.
+ * Deleting it causes: "deploy config points to wrangler.json — does not exist"
+ *
+ * Nothing to delete now. Script kept so the postbuild npm hook doesn't fail.
+ */
+console.log("✅ Post-build cleanup complete (nothing to remove).");
