@@ -203,7 +203,11 @@ function AuthenticatedLayout() {
       </aside>
 
       {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-white/80 px-2 pb-safe backdrop-blur-lg md:hidden">
+      <div
+        role="navigation"
+        aria-label="Mobile bottom navigation"
+        className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-white/80 px-2 pb-safe backdrop-blur-lg md:hidden"
+      >
         {navItems.slice(0, 4).map((item) => {
           const active = path === item.to || (item.to !== "/dashboard" && path.startsWith(item.to));
           const Icon = item.icon;
@@ -211,6 +215,7 @@ function AuthenticatedLayout() {
             <Link
               key={item.label}
               to={item.to as any}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "flex flex-col items-center gap-1 px-3 py-1 transition-all active:scale-95",
                 active ? "text-brand" : "text-muted-foreground"
@@ -223,7 +228,10 @@ function AuthenticatedLayout() {
           );
         })}
         <button
+          type="button"
           onClick={() => setMobileMenuOpen(true)}
+          aria-label="Open mobile menu"
+          aria-expanded={mobileMenuOpen}
           className={cn(
             "flex flex-col items-center gap-1 px-3 py-1 transition-all active:scale-95",
             mobileMenuOpen ? "text-brand" : "text-muted-foreground"
