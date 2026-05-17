@@ -120,7 +120,7 @@ function DashboardPage() {
         <KpiCard icon={Calendar} tone="info" label="Next Lesson" value="Wed 14 May" hint="10:00am · James Mwangi" />
         <KpiCard icon={CheckCircle2} tone="success" label="Lessons Completed" value="8 / 20" hint="40% complete" />
         <KpiCard icon={BookOpen} tone="warning" label="Theory Score" value="74%" hint="2 categories left" />
-        <KpiCard icon={AlertCircle} tone="danger" label="Balance Due" value={`KES ${(studentData?.balance || 0).toLocaleString()}`}
+        <KpiCard icon={AlertCircle} tone="danger" label="Balance Due" value={`KES ${(studentData?.balance ?? 0).toLocaleString()}`}
           action={<Button size="sm" variant="primary">Pay now</Button>} />
       </div>
 

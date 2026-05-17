@@ -1,5 +1,8 @@
 -- DriveSchool Pro - Cloudflare D1 Database Schema
 
+-- Enable foreign key enforcement
+PRAGMA foreign_keys = ON;
+
 -- Users table (replaces Supabase auth.users)
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
@@ -270,6 +273,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 -- Indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id);
 CREATE INDEX IF NOT EXISTS idx_students_user_id ON students(user_id);
 CREATE INDEX IF NOT EXISTS idx_students_course_id ON students(course_id);

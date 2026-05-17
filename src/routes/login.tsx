@@ -15,7 +15,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshAuth } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,20 +31,19 @@ function LoginPage() {
       password 
     });
     
-    setLoading(false);
-    
     if (error || !data) { 
+      setLoading(false);
       toast.error(error || "Login failed"); 
       return; 
     }
     
-    // Store token
+    // Store token then refresh auth context — no hard reload needed
     api.setAuthToken(data.token);
+    await refreshAuth();
+    setLoading(false);
     
     toast.success("Welcome back!");
-    
-    // Reload to update auth context
-    window.location.href = "/dashboard";
+    navigate({ to: "/dashboard" });
   };
 
   return (

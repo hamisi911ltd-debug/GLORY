@@ -14,7 +14,13 @@ export function registerStudentRoutes(router) {
     try {
       const student = await StudentService.findByUserId(env.DB, auth.user.id);
       if (!student) {
-        return notFound("Student record not found");
+        // Staff users don't have a student record — return empty state
+        return ok({
+          student: null,
+          payments: [],
+          upcoming_lessons: [],
+          summary: { total_paid: 0, balance: 0, lessons_completed: 0, upcoming_lessons_count: 0 }
+        });
       }
 
       // Get recent payments with real-time status
@@ -215,7 +221,14 @@ export function registerStudentRoutes(router) {
     try {
       const student = await StudentService.findByUserId(env.DB, auth.user.id);
       if (!student) {
-        return notFound("Student record not found");
+        // Staff users — return zeroed stats
+        return ok({
+          stats: {
+            progress_percentage: 0, lessons_completed: 0, lessons_remaining: 0,
+            upcoming_lessons: 0, theory_completed: false, practical_completed: false,
+            exam_ready: false, balance: 0, total_paid: 0, course_price: 0, payment_completion: 0
+          }
+        });
       }
 
       // Get lesson statistics
@@ -223,13 +236,13 @@ export function registerStudentRoutes(router) {
       const completedLessons = allLessons.filter(l => l.status === 'completed');
       const upcomingLessons = allLessons.filter(l => l.status === 'scheduled');
 
-      // Get payment statistics
-      const payments = await PaymentService.list(env.DB, { student_id: student.id });
+      // Use actual course lesson count, not hardcoded 30
+      const totalLessons = student.lesson_count || 30;
 
       const stats = {
         progress_percentage: student.progress_percentage || 0,
         lessons_completed: completedLessons.length,
-        lessons_remaining: Math.max(0, 30 - completedLessons.length), // Default 30 lessons
+        lessons_remaining: Math.max(0, totalLessons - completedLessons.length),
         upcoming_lessons: upcomingLessons.length,
         theory_completed: student.theory_completed || false,
         practical_completed: student.practical_completed || false,
