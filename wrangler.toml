@@ -1,7 +1,10 @@
 name = "glory"
 compatibility_date = "2026-05-13"
-compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "./dist/client"
+
+# D1 database binding — replace the database_id with your real D1 database ID.
+# Run: wrangler d1 create driveschool-pro
+# Then copy the id shown and paste it below.
 [[d1_databases]]
 binding = "DB"
 database_name = "driveschool-pro"

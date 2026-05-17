@@ -17,40 +17,74 @@ dist/client
 /
 ```
 
-### Environment Variables Required
-- `VITE_SUPABASE_URL` - Your Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` - Your Supabase anon key
+### Node Version
+Set to **20** or higher in Cloudflare Pages settings.
+
+---
 
 ## Cloudflare Pages Settings
 
 1. **Framework preset**: None (Custom)
 2. **Build command**: `npm install && npm run build`
 3. **Build output directory**: `dist/client`
-4. **Node version**: 20.11.0 or higher
+4. **Node version**: 20
 
-## D1 Database Binding
+---
 
-Make sure to bind your D1 database in Cloudflare Pages:
-1. Go to your Pages project settings
-2. Navigate to "Functions" > "D1 database bindings"
-3. Add binding: `DB` → Your D1 database name
+## D1 Database Binding (REQUIRED)
 
-## Deployment
+The API will return 503 errors until this is configured.
 
-The app uses:
-- **Frontend**: TanStack Start (React) deployed to Cloudflare Pages
-- **Backend**: Cloudflare Workers (in `/backend` folder)
-- **Database**: Cloudflare D1
+1. Go to your Pages project in the Cloudflare dashboard
+2. Navigate to **Settings → Functions**
+3. Scroll to **D1 database bindings**
+4. Click **Add binding**
+5. Set **Variable name** to `DB` and select your `driveschool-pro` database
+6. Click **Save** and redeploy
 
-### Manual Deployment Trigger
+If you haven't created the D1 database yet:
 ```bash
-curl -X POST "https://api.cloudflare.com/client/v4/pages/webhooks/deploy_hooks/YOUR_HOOK_ID"
+wrangler d1 create driveschool-pro
+# Copy the database_id from the output
+# Paste it into wrangler.toml → [[d1_databases]] → database_id
 ```
+
+Then run the schema:
+```bash
+wrangler d1 execute driveschool-pro --file=backend/schema.sql --remote
+```
+
+---
+
+## DNS / Domain Setup
+
+Your site is deployed at the Cloudflare Pages URL (e.g. `glory.pages.dev`).
+To use a custom domain like `immacurate.co.ke`:
+
+1. Go to your Pages project → **Custom domains**
+2. Add your domain
+3. Cloudflare will show you the DNS records to add at your domain registrar
+4. Add a CNAME record pointing `immacurate.co.ke` → `glory.pages.dev`
+
+> **Note**: `immaculate.co.ke` (with an 'l') is a different domain and will show
+> `DNS_PROBE_FINISHED_NXDOMAIN` unless you also register and configure that domain.
+
+---
 
 ## Troubleshooting
 
-If you see 404 errors:
-1. Check that the build completed successfully in Cloudflare Pages dashboard
-2. Verify the build output directory is set to `dist/client`
-3. Ensure all environment variables are set
-4. Check the Functions logs for any errors
+### Site shows blank / crashes on Cloudflare Pages
+- Ensure `nodejs_compat` is NOT in the root `wrangler.toml` (it belongs only in `backend/wrangler.toml`)
+- Verify build output directory is `dist/client`
+- Check the Cloudflare Pages deployment logs for build errors
+
+### 503 "Database configuration error"
+- D1 binding `DB` is not configured — follow the D1 setup steps above
+
+### 404 Not Found
+- Build output directory is wrong — must be `dist/client`
+- Check deployment logs to confirm the build succeeded
+
+### DNS_PROBE_FINISHED_NXDOMAIN
+- The domain is not registered or DNS records are not configured
+- Check your domain registrar and Cloudflare DNS settings
