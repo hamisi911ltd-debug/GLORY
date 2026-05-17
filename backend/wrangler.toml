@@ -1,1 +1,10 @@
-﻿name = "driveschool-pro-api"main = "src/worker.js"compatibility_date = "2025-05-10"compatibility_flags = ["nodejs_compat"][vars]ENVIRONMENT = "production"[[d1_databases]]binding = "DB"database_name = "driveschool-pro"database_id = "your-database-id-here"
+﻿name = "driveschool-pro-api"
+main = "src/worker.js"
+compatibility_date = "2025-05-10"
+compatibility_flags = ["nodejs_compat"]
+[vars]
+ENVIRONMENT = "production"
+[[d1_databases]]
+binding = "DB"
+database_name = "driveschool-pro"
+database_id = "your-database-id-here"
