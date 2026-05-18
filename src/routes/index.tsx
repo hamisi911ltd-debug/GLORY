@@ -12,9 +12,9 @@ import { Footer } from "@/components/site/Footer";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DriveSchool Pro — Learn to Drive with Confidence" },
+      { title: "Immacurate Driving School — Learn to Drive with Confidence" },
       { name: "description", content: "Kenya's #1 driving school. Cars, motorcycles, HGVs. 500+ students trained, 98% pass rate, 3 branches." },
-      { property: "og:title", content: "DriveSchool Pro" },
+      { property: "og:title", content: "Immacurate Driving School" },
       { property: "og:description", content: "Learn to drive with Kenya's top-rated driving school." },
     ],
   }),
@@ -72,7 +72,7 @@ function HomePage() {
               Learn to Drive with <span className="text-brand">Confidence</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg text-white/70">
-              Professional instruction for cars, motorcycles, and HGVs across 3 branches. Book lessons online, pay with M-Pesa, get certified.
+              Immacurate Driving School — Professional instruction for cars, motorcycles, and HGVs across 3 branches. Book lessons online, pay with M-Pesa, get certified.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild variant="hero" size="xl"><Link to="/register">Enrol now <ArrowRight className="ml-1" /></Link></Button>

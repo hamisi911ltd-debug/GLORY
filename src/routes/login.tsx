@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Log in — DriveSchool Pro" }, { name: "description", content: "Log in to your DriveSchool Pro account." }] }),
+  head: () => ({ meta: [{ title: "Log in — Immacurate Driving School" }, { name: "description", content: "Log in to your Immacurate Driving School account." }] }),
   component: LoginPage,
 });
 

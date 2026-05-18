@@ -10,7 +10,7 @@ import { api } from "@/lib/api";
 import { LineChart, Line, BarChart as RechartsBarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Area, AreaChart } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — DriveSchool Pro" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — Immacurate Driving School" }] }),
   component: DashboardPage,
 });
 

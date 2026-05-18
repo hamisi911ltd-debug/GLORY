@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
-      { title: "Register — DriveSchool Pro" },
-      { name: "description", content: "Create your DriveSchool Pro account in under 2 minutes." },
+      { title: "Register — Immacurate Driving School" },
+      { name: "description", content: "Create your Immacurate Driving School account in under 2 minutes." },
     ],
   }),
   component: RegisterPage,
@@ -96,7 +96,7 @@ function RegisterPage() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-light text-success">
             <Check className="h-8 w-8" strokeWidth={3} />
           </div>
-          <h1 className="mt-6 text-h1 text-navy">Welcome to DriveSchool Pro!</h1>
+          <h1 className="mt-6 text-h1 text-navy">Welcome to Immacurate Driving School!</h1>
           <p className="mt-2 text-muted-foreground">Your account is ready. Sign in to get started.</p>
           <Button asChild variant="primary" size="lg" className="mt-6 w-full">
             <Link to="/login">Go to sign in <ArrowRight /></Link>
