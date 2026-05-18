@@ -105,9 +105,10 @@ if (config.vars && Object.keys(config.vars).length === 0) {
   delete config.vars;
 }
 
-// Fix pages_build_output_dir — the wrangler.json lives inside dist/client,
-// so "." means "this directory" which is correct for Cloudflare Pages.
-config.pages_build_output_dir = ".";
+// Remove pages_build_output_dir from the generated file entirely.
+// The root wrangler.toml already defines it correctly as "./dist/client".
+// Having it in the generated dist/client/wrangler.json causes path doubling.
+delete config.pages_build_output_dir;
 
 // Ensure D1 database binding has the correct database_id (the vite plugin may
 // generate a placeholder or omit it entirely)
