@@ -73,7 +73,7 @@ const emptyArrayFields = [
   "workflows", "migrations", "kv_namespaces", "send_email",
   "r2_buckets", "vectorize", "hyperdrive", "services",
   "analytics_engine_datasets", "dispatch_namespaces",
-  "mtls_certificates", "pipelines", "durable_objects",
+  "mtls_certificates", "pipelines",
 ];
 for (const key of emptyArrayFields) {
   const val = config[key];
@@ -84,6 +84,14 @@ for (const key of emptyArrayFields) {
     if (isEmpty) delete config[key];
   }
 }
+
+// Remove durable_objects if it has no bindings
+if (config.durable_objects?.bindings?.length === 0) {
+  delete config.durable_objects;
+}
+
+// Always remove dev block — not needed for Pages deploy
+delete config.dev;
 
 // Remove empty queues
 if (config.queues) {
