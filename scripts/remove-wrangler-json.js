@@ -97,6 +97,30 @@ if (config.vars && Object.keys(config.vars).length === 0) {
   delete config.vars;
 }
 
+// Fix pages_build_output_dir — must be a relative path, not an absolute Windows path
+config.pages_build_output_dir = "./dist/client";
+
+// Ensure D1 database binding has the correct database_id (the vite plugin may
+// generate a placeholder or omit it entirely)
+const D1_DATABASE_ID = "1daf6984-59c5-402e-b3fc-5ff438034c94";
+const D1_DATABASE_NAME = "driveschool-pro";
+const D1_BINDING = "DB";
+
+if (!config.d1_databases || !Array.isArray(config.d1_databases)) {
+  config.d1_databases = [];
+}
+const existingBinding = config.d1_databases.find((b) => b.binding === D1_BINDING);
+if (existingBinding) {
+  existingBinding.database_id = D1_DATABASE_ID;
+  existingBinding.database_name = D1_DATABASE_NAME;
+} else {
+  config.d1_databases.push({
+    binding: D1_BINDING,
+    database_name: D1_DATABASE_NAME,
+    database_id: D1_DATABASE_ID,
+  });
+}
+
 writeFileSync(file, JSON.stringify(config, null, 2));
 console.log("✅ dist/client/wrangler.json cleaned for Cloudflare Pages deploy.");
 console.log("   Remaining fields:", Object.keys(config).join(", "));
