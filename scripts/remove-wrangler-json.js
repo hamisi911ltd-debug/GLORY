@@ -105,8 +105,9 @@ if (config.vars && Object.keys(config.vars).length === 0) {
   delete config.vars;
 }
 
-// Fix pages_build_output_dir — must be a relative path, not an absolute Windows path
-config.pages_build_output_dir = "./dist/client";
+// Fix pages_build_output_dir — the wrangler.json lives inside dist/client,
+// so "." means "this directory" which is correct for Cloudflare Pages.
+config.pages_build_output_dir = ".";
 
 // Ensure D1 database binding has the correct database_id (the vite plugin may
 // generate a placeholder or omit it entirely)
