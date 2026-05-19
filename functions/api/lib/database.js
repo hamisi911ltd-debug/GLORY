@@ -21,6 +21,10 @@ export function generateId() {
   return nanoid();
 }
 
+export function normalizeEmail(email) {
+  return String(email ?? '').trim().toLowerCase();
+}
+
 /**
  * Hash password for storage
  */
@@ -80,28 +84,29 @@ export async function executeUpdate(db, query, params = []) {
 export const UserService = {
   async create(db, userData) {
     const id = generateId();
+    const normalizedEmail = normalizeEmail(userData.email);
     const passwordHash = await hashPassword(userData.password);
     
     const query = `
-      INSERT INTO users (id, email, password_hash, full_name, phone, email_verified)
+      INSERT INTO users (id, email, password, full_name, phone, email_verified)
       VALUES (?, ?, ?, ?, ?, ?)
     `;
     
     await executeUpdate(db, query, [
       id,
-      userData.email,
+      normalizedEmail,
       passwordHash,
       userData.full_name,
       userData.phone || null,
       false
     ]);
     
-    return { id, ...userData, password_hash: passwordHash };
+    return { id, ...userData, email: normalizedEmail, password: passwordHash };
   },
 
   async findByEmail(db, email) {
-    const query = `SELECT * FROM users WHERE email = ?`;
-    return await executeQueryFirst(db, query, [email]);
+    const query = `SELECT * FROM users WHERE LOWER(email) = ?`;
+    return await executeQueryFirst(db, query, [normalizeEmail(email)]);
   },
 
   async findById(db, id) {

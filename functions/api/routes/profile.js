@@ -57,7 +57,7 @@ export function registerProfileRoutes(router) {
 
     try {
       const passwordHash = await hashPassword(newPassword);
-      await UserService.update(env.DB, auth.user.id, { password_hash: passwordHash });
+      await UserService.update(env.DB, auth.user.id, { password: passwordHash });
       return ok({ message: "Password updated successfully" });
     } catch (error) {
       return badRequest(error.message);

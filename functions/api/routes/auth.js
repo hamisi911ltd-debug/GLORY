@@ -1,6 +1,9 @@
 import { UserService, StudentService, CourseService, BranchService, verifyPassword } from "../lib/database.js";
-import { generateToken, createSession } from "../lib/auth.js";
+import { generateToken, createSession, authenticate, checkRole } from "../lib/auth.js";
 import { ok, created, badRequest, unauthorized } from "../lib/response.js";
+
+const normalizeEmail = (value) => String(value ?? '').trim().toLowerCase();
+const ADMIN_ROLES = ['super_admin', 'branch_admin', 'instructor', 'finance', 'examiner'];
 
 export function registerAuthRoutes(router) {
   /**
@@ -8,8 +11,9 @@ export function registerAuthRoutes(router) {
    */
   router.post("/api/auth/register", async (req, env) => {
     const { email, password, firstName, lastName, phone, course, branch } = req.body ?? {};
+    const normalizedEmail = normalizeEmail(email);
 
-    if (!email || !password || !firstName || !lastName) {
+    if (!normalizedEmail || !password || !firstName || !lastName) {
       return badRequest("email, password, firstName, and lastName are required");
     }
     if (password.length < 6) {
@@ -18,14 +22,14 @@ export function registerAuthRoutes(router) {
 
     try {
       // Check if user already exists
-      const existingUser = await UserService.findByEmail(env.DB, email);
+      const existingUser = await UserService.findByEmail(env.DB, normalizedEmail);
       if (existingUser) {
         return badRequest("User with this email already exists");
       }
 
       // Create user
       const userData = {
-        email,
+        email: normalizedEmail,
         password,
         full_name: `${firstName} ${lastName}`,
         phone
@@ -56,24 +60,84 @@ export function registerAuthRoutes(router) {
   });
 
   /**
+   * POST /api/auth/admin
+   */
+  router.post("/api/auth/admin", async (req, env) => {
+    const { email, password, firstName, lastName, phone, role = 'super_admin', secret } = req.body ?? {};
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedEmail || !password || !firstName || !lastName) {
+      return badRequest("email, password, firstName, and lastName are required");
+    }
+    if (password.length < 6) {
+      return badRequest("Password must be at least 6 characters");
+    }
+    if (!ADMIN_ROLES.includes(role)) {
+      return badRequest(`Invalid admin role. Allowed roles: ${ADMIN_ROLES.join(', ')}`);
+    }
+
+    try {
+      const existingUser = await UserService.findByEmail(env.DB, normalizedEmail);
+      if (existingUser) {
+        return badRequest("User with this email already exists");
+      }
+
+      let authorized = false;
+      if (secret && env.ADMIN_CREATION_SECRET && secret === env.ADMIN_CREATION_SECRET) {
+        authorized = true;
+      } else {
+        const auth = await authenticate(req.raw, env);
+        if (auth.error) return auth.error;
+        const roleCheck = await checkRole(auth.user.id, env, 'super_admin');
+        if (roleCheck) return roleCheck;
+        authorized = true;
+      }
+
+      if (!authorized) {
+        return unauthorized("Unauthorized admin creation request");
+      }
+
+      const userData = {
+        email: normalizedEmail,
+        password,
+        full_name: `${firstName} ${lastName}`,
+        phone
+      };
+
+      const user = await UserService.create(env.DB, userData);
+      await UserService.addRole(env.DB, user.id, role);
+
+      return created({
+        message: "Admin account created successfully",
+        userId: user.id,
+        role
+      });
+    } catch (error) {
+      console.error('Admin creation error:', error);
+      return badRequest(error.message);
+    }
+  });
+
+  /**
    * POST /api/auth/login
    */
   router.post("/api/auth/login", async (req, env) => {
     const { email, password } = req.body ?? {};
+    const normalizedEmail = normalizeEmail(email);
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return badRequest("Email and password are required");
     }
 
     try {
       // Find user by email
-      const user = await UserService.findByEmail(env.DB, email);
-      if (!user) {
+      const user = await UserService.findByEmail(env.DB, normalizedEmail);
+      if (!user || !user.password) {
         return unauthorized("Invalid email or password");
       }
 
       // Verify password
-      const isValidPassword = await verifyPassword(password, user.password_hash);
+      const isValidPassword = await verifyPassword(password, user.password);
       if (!isValidPassword) {
         return unauthorized("Invalid email or password");
       }
@@ -87,8 +151,8 @@ export function registerAuthRoutes(router) {
       // Get user roles
       const roles = await UserService.getRoles(env.DB, user.id);
 
-      // Remove password hash from response
-      const { password_hash, ...userWithoutPassword } = user;
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
 
       return ok({
         message: "Login successful",
@@ -133,8 +197,8 @@ export function registerAuthRoutes(router) {
         studentProfile = await StudentService.findByUserId(env.DB, user.id);
       }
 
-      // Remove password hash from response
-      const { password_hash, ...userWithoutPassword } = user;
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
 
       return ok({
         user: userWithoutPassword,
