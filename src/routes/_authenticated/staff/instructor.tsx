@@ -52,6 +52,49 @@ const statusConfig = {
   completed: { label: "Completed", color: "bg-success-light text-success" },
 };
 
+function AvailabilityTab() {
+  const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const [availability, setAvailability] = useState<Record<string, boolean>>(
+    Object.fromEntries(DAYS.map((d) => [d, d !== "Saturday"]))
+  );
+
+  const toggle = (day: string) =>
+    setAvailability((prev) => ({ ...prev, [day]: !prev[day] }));
+
+  return (
+    <div className="rounded-2xl border border-border bg-white p-6">
+      <h2 className="text-h2 text-navy">Set your availability</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Mark the days and times you're available for lessons this week.</p>
+      <div className="mt-6 space-y-3">
+        {DAYS.map((day) => (
+          <div key={day} className="flex items-center justify-between rounded-xl border border-border p-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => toggle(day)}
+                className={cn("relative h-6 w-11 rounded-full transition-colors", availability[day] ? "bg-success" : "bg-surface-2")}
+                aria-pressed={availability[day]}
+                aria-label={`Toggle ${day}`}
+              >
+                <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform", availability[day] ? "translate-x-5" : "translate-x-0.5")} />
+              </button>
+              <span className="font-medium text-navy">{day}</span>
+            </div>
+            {availability[day]
+              ? <span className="text-sm text-muted-foreground">8:00 AM – 6:00 PM</span>
+              : <Badge variant="default" size="sm">Off</Badge>
+            }
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 flex justify-end">
+        <Button variant="primary" size="lg" onClick={() => toast.success("Availability saved")}>
+          Save availability
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function InstructorDashboard() {
   const [activeTab, setActiveTab] = useState<"today" | "students" | "ratings" | "availability">("today");
   const [noteModal, setNoteModal] = useState<LessonItem | null>(null);
@@ -228,35 +271,7 @@ function InstructorDashboard() {
 
         {/* Availability */}
         {activeTab === "availability" && (
-          <div className="rounded-2xl border border-border bg-white p-6">
-            <h2 className="text-h2 text-navy">Set your availability</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Mark the days and times you're available for lessons this week.</p>
-            <div className="mt-6 space-y-3">
-              {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => {
-                const [available, setAvailable] = useState(day !== "Saturday");
-                return (
-                  <div key={day} className="flex items-center justify-between rounded-xl border border-border p-4">
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setAvailable(!available)}
-                        className={cn("relative h-6 w-11 rounded-full transition-colors", available ? "bg-success" : "bg-surface-2")}
-                      >
-                        <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform", available ? "translate-x-5" : "translate-x-0.5")} />
-                      </button>
-                      <span className="font-medium text-navy">{day}</span>
-                    </div>
-                    {available && (
-                      <span className="text-sm text-muted-foreground">8:00 AM – 6:00 PM</span>
-                    )}
-                    {!available && <Badge variant="default" size="sm">Off</Badge>}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-6 flex justify-end">
-              <Button variant="primary" size="lg" onClick={() => toast.success("Availability saved")}>Save availability</Button>
-            </div>
-          </div>
+          <AvailabilityTab />
         )}
       </div>
 

@@ -56,17 +56,17 @@ function ProfilePage() {
       try {
         const { data, error } = await api.get<{ user: any; roles: string[] }>("/auth/me");
         if (data && data.user) {
-          const user = data.user;
+          const profile = data.user;
           setPersonal({
-            firstName: user.full_name?.split(" ")[0] ?? "",
-            lastName: user.full_name?.split(" ").slice(1).join(" ") ?? "",
-            email: user.email ?? "",
-            phone: user.phone ?? "",
-            dob: user.date_of_birth ?? "",
-            nationalId: user.national_id ?? "",
-            branch: user.branch_id ?? "westlands",
+            firstName: profile.full_name?.split(" ")[0] ?? "",
+            lastName: profile.full_name?.split(" ").slice(1).join(" ") ?? "",
+            email: profile.email ?? "",
+            phone: profile.phone ?? "",
+            dob: profile.date_of_birth ?? "",
+            nationalId: profile.national_id ?? "",
+            branch: profile.branch_id ?? "westlands",
           });
-          setAvatarUrl(user.avatar_url || null);
+          setAvatarUrl(profile.avatar_url || null);
         } else if (error) {
           console.error("Failed to load profile:", error);
         }
@@ -137,8 +137,13 @@ function ProfilePage() {
       toast.error("Password must be at least 6 characters");
       return;
     }
+    if (!passwords.current) {
+      toast.error("Please enter your current password");
+      return;
+    }
     setSaving(true);
     const { error } = await api.post("/profile/change-password", {
+      currentPassword: passwords.current,
       newPassword: passwords.newPw,
     });
     setSaving(false);

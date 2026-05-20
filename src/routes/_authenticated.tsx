@@ -9,14 +9,14 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }: { location: { href: string } }) => {
     const token = api.getAuthToken();
-    if (!token) throw redirect({ to: "/login" });
+    if (!token) throw redirect({ to: "/login", search: { redirect: location.href } });
   },
   component: AuthenticatedLayout,
 });
 
-// Student nav
+// Student nav — badge count is dynamic, not hardcoded
 const STUDENT_NAV = [
   { to: "/dashboard", label: "Dashboard", icon: Home },
   { to: "/schedule", label: "My Schedule", icon: CalendarDays },
@@ -24,7 +24,7 @@ const STUDENT_NAV = [
   { to: "/payments", label: "Payments", icon: CreditCard },
   { to: "/theory", label: "Theory Tests", icon: GraduationCap },
   { to: "/documents", label: "Documents", icon: FileText },
-  { to: "/notifications", label: "Notifications", icon: Bell, badge: 3 },
+  { to: "/notifications", label: "Notifications", icon: Bell },
   { to: "/profile", label: "Profile & Settings", icon: Settings },
 ];
 

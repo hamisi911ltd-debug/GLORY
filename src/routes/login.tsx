@@ -9,22 +9,22 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Log in — DriveSchool Pro" }, { name: "description", content: "Log in to your DriveSchool Pro account." }] }),
+  head: () => ({ meta: [{ title: "Log in — Immacurate Driving School" }, { name: "description", content: "Log in to your Immacurate Driving School account." }] }),
   component: LoginPage,
 });
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading, refreshAuth } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!loading && user) {
       navigate({ to: "/dashboard" });
     }
-  }, [authLoading, user, navigate]);
+  }, [loading, user, navigate]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,14 +35,16 @@ function LoginPage() {
       password,
     });
     
-    setLoading(false);
-    
     if (error || !data) {
+      setLoading(false);
       toast.error(error || 'Login failed');
       return;
     }
     
     api.setAuthToken(data.token);
+    await refreshAuth();
+    setLoading(false);
+    
     toast.success('Welcome back!');
     navigate({ to: '/dashboard' });
   };

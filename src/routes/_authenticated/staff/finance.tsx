@@ -45,6 +45,25 @@ interface PendingBalance {
   lastPayment: string;
   daysOverdue: number;
 }
+
+const methodConfig: Record<PayMethod, { label: string; color: string }> = {
+  mpesa: { label: "M-Pesa", color: "bg-success-light text-success" },
+  card:  { label: "Card",   color: "bg-info-light text-info" },
+  cash:  { label: "Cash",   color: "bg-warning-light text-warning-foreground" },
+};
+
+const statusConfig: Record<PayStatus, { label: string; icon: any; variant: "success" | "warning" | "danger" }> = {
+  paid:    { label: "Paid",    icon: CheckCircle2, variant: "success" },
+  pending: { label: "Pending", icon: Clock,        variant: "warning" },
+  failed:  { label: "Failed",  icon: XCircle,      variant: "danger" },
+};
+
+const revenueData = [
+  { week: "Week 1", mpesa: 18000, card: 5000, cash: 3000 },
+  { week: "Week 2", mpesa: 22000, card: 8000, cash: 4500 },
+  { week: "Week 3", mpesa: 19500, card: 6000, cash: 2000 },
+  { week: "Week 4", mpesa: 25000, card: 9500, cash: 5500 },
+];
 function FinanceDashboard() {
   const [tab, setTab] = useState<"payments" | "pending" | "invoices" | "expenses" | "reports">("payments");
   const [payments, setPayments] = useState<PayRecord[]>([]);
@@ -202,7 +221,7 @@ function FinanceDashboard() {
         {[
           { label: "Total revenue", value: `KES ${totalRevenue.toLocaleString()}`, sub: "This month", icon: TrendingUp, color: "text-success" },
           { label: "Collected today", value: "KES 12,000", sub: "3 transactions", icon: DollarSign, color: "text-info" },
-          { label: "Outstanding balances", value: `KES ${totalOutstanding.toLocaleString()}`, sub: `${pendingBalances.length} students`, icon: AlertTriangle, color: "text-danger" },
+          { label: "Outstanding balances", value: `KES ${totalOutstanding.toLocaleString()}`, sub: `${balances.filter(b => b.balance > 0).length} students`, icon: AlertTriangle, color: "text-danger" },
           { label: "M-Pesa vs Card", value: `${Math.round((mpesaTotal / (mpesaTotal + cardTotal)) * 100)}% M-Pesa`, sub: `KES ${cardTotal.toLocaleString()} card`, icon: BarChart3, color: "text-purple" },
         ].map((k) => (
           <div key={k.label} className="rounded-xl border border-border bg-white p-5">
@@ -457,7 +476,7 @@ function FinanceDashboard() {
               </Button>
             </div>
             <div className="mt-4 space-y-2">
-              {allPayments.filter((p) => p.status === "paid").map((p) => (
+              {payments.filter((p) => p.status === "paid").map((p) => (
                 <div key={p.id} className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-surface-1 transition-colors">
                   <div>
                     <p className="font-medium text-navy">INV-{p.id.padStart(4, "0")}</p>

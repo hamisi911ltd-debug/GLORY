@@ -152,6 +152,9 @@ export function registerPaymentRoutes(router) {
     if (!student_id || !amount) {
       return badRequest("student_id and amount are required");
     }
+    if (parseFloat(amount) <= 0) {
+      return badRequest("Amount must be greater than zero");
+    }
 
     try {
       // Verify student exists
@@ -160,7 +163,7 @@ export function registerPaymentRoutes(router) {
         return badRequest("Student not found");
       }
 
-      // Create payment record
+      // Create payment record already marked completed
       const paymentData = {
         student_id,
         amount: parseFloat(amount),
@@ -174,11 +177,11 @@ export function registerPaymentRoutes(router) {
 
       const payment = await PaymentService.create(env.DB, paymentData);
 
-      // Update student balance (this will also update student balance)
-      await PaymentService.updateStatus(env.DB, payment.id, 'completed');
+      // Recalculate balance from all completed payments (avoids double-subtract)
+      await StudentService.recalculateBalance(env.DB, student_id);
 
       // Get updated student data to show correct balance
-      const updatedStudent = await StudentService.findById(env.DB, payment.student_id);
+      const updatedStudent = await StudentService.findById(env.DB, student_id);
       
       // Create notification for student
       await NotificationService.create(env.DB, {
@@ -321,17 +324,20 @@ export function registerPaymentRoutes(router) {
 
       const payment = await PaymentService.findById(env.DB, id);
       if (payment) {
-        // Create notification for student
+        // Get the student to find their user_id for the notification
+        const student = await StudentService.findById(env.DB, payment.student_id);
         const statusMessage = status === 'completed' ? 'confirmed' : 
                             status === 'failed' ? 'failed' : 'updated';
         
-        await NotificationService.create(env.DB, {
-          user_id: payment.student_id,
-          title: "Payment Status Updated",
-          message: `Your payment of KES ${payment.amount} has been ${statusMessage}.`,
-          type: status === 'completed' ? 'success' : status === 'failed' ? 'error' : 'info',
-          action_url: `/payments`
-        });
+        if (student) {
+          await NotificationService.create(env.DB, {
+            user_id: student.user_id,
+            title: "Payment Status Updated",
+            message: `Your payment of KES ${payment.amount} has been ${statusMessage}.`,
+            type: status === 'completed' ? 'success' : status === 'failed' ? 'error' : 'info',
+            action_url: `/payments`
+          });
+        }
       }
 
       return ok({
@@ -372,20 +378,18 @@ export function registerPaymentRoutes(router) {
       const student = await StudentService.findById(env.DB, payment.student_id);
       if (student) {
         await StudentService.recalculateBalance(env.DB, student.id);
+
+        // Notify the student (use their user_id, not student record id)
+        await NotificationService.create(env.DB, {
+          user_id: student.user_id,
+          title: "Payment Deleted",
+          message: `A payment record of KES ${payment.amount} has been removed from your account.`,
+          type: "info",
+          action_url: `/payments`
+        });
       }
 
-      // Create notification for student
-      await NotificationService.create(env.DB, {
-        user_id: payment.student_id,
-        title: "Payment Deleted",
-        message: `A payment record of KES ${payment.amount} has been removed from your account.`,
-        type: "info",
-        action_url: `/payments`
-      });
-
-      return ok({
-        message: "Payment deleted successfully"
-      });
+      return ok({ message: "Payment deleted successfully" });
     } catch (error) {
       console.error('Delete payment error:', error);
       return badRequest(error.message);

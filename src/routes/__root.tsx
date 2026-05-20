@@ -39,7 +39,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "DriveSchool Pro — Learn to Drive with Confidence" },
+      { title: "Immacurate Driving School — Learn to Drive with Confidence" },
       { name: "description", content: "Kenya's top-rated driving school. Professional instruction for cars, motorcycles, and HGVs across 3 branches." },
     ],
     links: [{ rel: "stylesheet", href: appCss }],

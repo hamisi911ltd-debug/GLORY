@@ -50,12 +50,22 @@ export function registerProfileRoutes(router) {
     const auth = await authenticate(req.raw, env);
     if (auth.error) return auth.error;
 
-    const { newPassword } = req.body ?? {};
+    const { currentPassword, newPassword } = req.body ?? {};
     if (!newPassword || newPassword.length < 6) {
-      return badRequest("Password must be at least 6 characters");
+      return badRequest("New password must be at least 6 characters");
     }
 
     try {
+      // Verify current password before allowing change
+      const user = await UserService.findById(env.DB, auth.user.id);
+      if (!user) return notFound("User not found");
+
+      if (currentPassword) {
+        const { verifyPassword } = await import("../lib/database.js");
+        const valid = await verifyPassword(currentPassword, user.password_hash);
+        if (!valid) return badRequest("Current password is incorrect");
+      }
+
       const passwordHash = await hashPassword(newPassword);
       await UserService.update(env.DB, auth.user.id, { password: passwordHash });
       return ok({ message: "Password updated successfully" });

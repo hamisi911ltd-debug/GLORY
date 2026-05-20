@@ -15,44 +15,43 @@ interface AuthState {
   roles: AppRole[];
   loading: boolean;
   signOut: () => Promise<void>;
+  /** Call after login to refresh user/roles without a full page reload */
+  refreshAuth: () => Promise<void>;
 }
 
-const AuthContext = React.createContext<AuthState>({
-  user: null, roles: [], loading: true, signOut: async () => {},
-});
+const AuthContext = React.createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<User | null>(null);
   const [roles, setRoles] = React.useState<AppRole[]>([]);
   const [loading, setLoading] = React.useState(true);
 
-  React.useEffect(() => {
-    // Check if user is logged in
-    const checkAuth = async () => {
-      const token = api.getAuthToken();
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      // Verify token and get user data
-      const { data, error } = await api.get<{ user: User; roles: AppRole[] }>("/auth/me");
-      
-      if (error || !data) {
-        // Token invalid, clear it
-        api.clearAuthToken();
-        setUser(null);
-        setRoles([]);
-      } else {
-        setUser(data.user);
-        setRoles(data.roles);
-      }
-      
+  const checkAuth = React.useCallback(async () => {
+    const token = api.getAuthToken();
+    if (!token) {
+      setUser(null);
+      setRoles([]);
       setLoading(false);
-    };
+      return;
+    }
 
-    checkAuth();
+    const { data, error } = await api.get<{ user: User; roles: AppRole[] }>("/auth/me");
+
+    if (error || !data) {
+      // Token invalid or expired — clear it
+      api.clearAuthToken();
+      setUser(null);
+      setRoles([]);
+    } else {
+      setUser(data.user);
+      setRoles(data.roles as AppRole[]);
+    }
+    setLoading(false);
   }, []);
+
+  React.useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const signOut = async () => {
     await api.post("/auth/logout");
@@ -61,14 +60,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRoles([]);
   };
 
-  const value: AuthState = {
-    user,
-    roles,
-    loading,
-    signOut,
+  const refreshAuth = async () => {
+    await checkAuth();
   };
+
+  const value: AuthState = { user, roles, loading, signOut, refreshAuth };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export const useAuth = () => React.useContext(AuthContext);
+export function useAuth(): AuthState {
+  const ctx = React.useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
+  return ctx;
+}

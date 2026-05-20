@@ -1,8 +1,8 @@
 name = "glory"
 compatibility_date = "2026-05-13"
-compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "./dist/client"
+
 [[d1_databases]]
 binding = "DB"
-database_name = "glory-db"
-database_id = "4334fb81-57f8-4e18-9b4a-1d01a926e21f"
+database_name = "driveschool-pro"
+database_id = "1daf6984-59c5-402e-b3fc-5ff438034c94"

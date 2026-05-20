@@ -1,30 +1,32 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Car, Bike, Truck, Check, MapPin, ArrowRight, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/site/Logo";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/register")({
-  head: () => ({ meta: [{ title: "Register — DriveSchool Pro" }, { name: "description", content: "Create your DriveSchool Pro account in under 2 minutes." }] }),
+  head: () => ({
+    meta: [
+      { title: "Register — Immacurate Driving School" },
+      { name: "description", content: "Create your Immacurate Driving School account in under 2 minutes." },
+    ],
+  }),
   component: RegisterPage,
 });
 
-const COURSES = [
-  { id: "car", name: "Car (Class B)", price: 8500, icon: Car, tone: "info" },
-  { id: "motorcycle", name: "Motorcycle (Class A)", price: 6000, icon: Bike, tone: "warning" },
-  { id: "hgv", name: "HGV / Truck (Class C)", price: 14000, icon: Truck, tone: "purple" },
-];
-const BRANCHES = [
-  { id: "westlands", name: "Westlands", address: "Mpaka Rd, Westlands, Nairobi", slots: 23 },
-  { id: "karen", name: "Karen", address: "Karen Hardy, Langata Rd", slots: 12 },
-  { id: "msa-rd", name: "Mombasa Road", address: "South C, Capital Centre", slots: 18 },
-];
+// Maps vehicle_type from DB to display metadata
+const COURSE_META: Record<string, { icon: any; tone: string }> = {
+  car:        { icon: Car,   tone: "info" },
+  manual:     { icon: Car,   tone: "info" },
+  automatic:  { icon: Car,   tone: "info" },
+  motorcycle: { icon: Bike,  tone: "warning" },
+  truck:      { icon: Truck, tone: "purple" },
+};
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -32,15 +34,44 @@ function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
+  const [courses, setCourses] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", phone: "", password: "",
-    course: "car", branch: "westlands",
+    course: "", branch: "",
   });
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value });
+
+  const set = (k: keyof typeof form) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  useEffect(() => {
+    const loadData = async () => {
+      setDataLoading(true);
+      const [coursesRes, branchesRes] = await Promise.all([
+        api.get<{ courses: any[] }>("/auth/courses"),
+        api.get<{ branches: any[] }>("/auth/branches"),
+      ]);
+      if (coursesRes.data?.courses?.length) {
+        setCourses(coursesRes.data.courses);
+        setForm((f) => ({ ...f, course: coursesRes.data!.courses[0].id }));
+      }
+      if (branchesRes.data?.branches?.length) {
+        setBranches(branchesRes.data.branches);
+        setForm((f) => ({ ...f, branch: branchesRes.data!.branches[0].id }));
+      }
+      setDataLoading(false);
+    };
+    loadData();
+  }, []);
 
   const submit = async () => {
+    if (!form.course || !form.branch) {
+      toast.error("Please select a course and branch");
+      return;
+    }
     setLoading(true);
-    
     const { data, error } = await api.post<{ userId: string; message: string }>("/auth/register", {
       email: form.email,
       password: form.password,
@@ -48,15 +79,13 @@ function RegisterPage() {
       lastName: form.lastName,
       phone: form.phone,
       course: form.course,
-      branch: form.branch
+      branch: form.branch,
     });
-    
     setLoading(false);
-    if (error || !data) { 
-      toast.error(error || "Registration failed"); 
-      return; 
+    if (error || !data) {
+      toast.error(error || "Registration failed");
+      return;
     }
-    
     setDone(true);
   };
 
@@ -67,8 +96,8 @@ function RegisterPage() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-light text-success">
             <Check className="h-8 w-8" strokeWidth={3} />
           </div>
-          <h1 className="mt-6 text-h1 text-navy">Welcome to DriveSchool Pro!</h1>
-          <p className="mt-2 text-muted-foreground">Check your email to verify your account, then sign in.</p>
+          <h1 className="mt-6 text-h1 text-navy">Welcome to Immacurate Driving School!</h1>
+          <p className="mt-2 text-muted-foreground">Your account is ready. Sign in to get started.</p>
           <Button asChild variant="primary" size="lg" className="mt-6 w-full">
             <Link to="/login">Go to sign in <ArrowRight /></Link>
           </Button>
@@ -82,25 +111,33 @@ function RegisterPage() {
       <div className="mx-auto max-w-2xl px-4 py-10">
         <div className="mb-8 flex items-center justify-between">
           <Logo />
-          <span className="text-sm text-muted-foreground">Already registered? <Link to="/login" className="font-medium text-brand hover:underline">Sign in</Link></span>
+          <span className="text-sm text-muted-foreground">
+            Already registered?{" "}
+            <Link to="/login" className="font-medium text-brand hover:underline">Sign in</Link>
+          </span>
         </div>
 
         {/* Stepper */}
         <div className="mb-8 flex items-center gap-3">
           {[1, 2, 3].map((n, i) => (
             <div key={n} className="flex flex-1 items-center">
-              <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors",
+              <div className={cn(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors",
                 step > n ? "bg-success text-white" :
                 step === n ? "bg-brand text-white" :
-                "bg-surface-2 text-muted-foreground")}>
+                "bg-surface-2 text-muted-foreground",
+              )}>
                 {step > n ? <Check className="h-4 w-4" /> : n}
               </div>
-              {i < 2 && <div className={cn("ml-3 h-0.5 flex-1 transition-colors", step > n ? "bg-success" : "bg-border")} />}
+              {i < 2 && (
+                <div className={cn("ml-3 h-0.5 flex-1 transition-colors", step > n ? "bg-success" : "bg-border")} />
+              )}
             </div>
           ))}
         </div>
 
         <div className="rounded-2xl border border-border bg-white p-8 shadow-sm">
+          {/* Step 1 — Personal info */}
           {step === 1 && (
             <>
               <h1 className="text-h2 text-navy">Personal information</h1>
@@ -115,74 +152,119 @@ function RegisterPage() {
                 </Field>
               </div>
               <div className="mt-8 flex justify-end">
-                <Button variant="primary" size="lg" onClick={() => setStep(2)} disabled={!form.firstName || !form.email || !form.password}>
+                <Button
+                  variant="primary" size="lg"
+                  onClick={() => setStep(2)}
+                  disabled={!form.firstName || !form.email || !form.password}
+                >
                   Continue <ArrowRight />
                 </Button>
               </div>
             </>
           )}
 
+          {/* Step 2 — Course */}
           {step === 2 && (
             <>
               <h1 className="text-h2 text-navy">Choose your course</h1>
               <p className="mt-1 text-sm text-muted-foreground">You can change this later.</p>
-              <div className="mt-6 space-y-3">
-                {COURSES.map((c) => {
-                  const selected = form.course === c.id;
-                  return (
-                    <button key={c.id} type="button" onClick={() => setForm({ ...form, course: c.id })}
-                      className={cn("flex w-full items-center gap-4 rounded-xl border-2 p-4 text-left transition-all",
-                        selected ? "border-brand-blue bg-brand-blue-light" : "border-border bg-white hover:border-muted-foreground/30")}>
-                      <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-${c.tone}-light text-${c.tone}`}>
-                        <c.icon className="h-6 w-6" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-navy">{c.name}</p>
-                        <p className="text-sm text-muted-foreground">From KES {c.price.toLocaleString()}</p>
-                      </div>
-                      {selected && <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-blue text-white"><Check className="h-3.5 w-3.5" strokeWidth={3} /></div>}
-                    </button>
-                  );
-                })}
-              </div>
+              {dataLoading ? (
+                <div className="mt-8 flex justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-border border-t-brand" />
+                </div>
+              ) : courses.length === 0 ? (
+                <p className="mt-6 text-sm text-muted-foreground">No courses available yet. Please contact the school.</p>
+              ) : (
+                <div className="mt-6 space-y-3">
+                  {courses.map((c) => {
+                    const selected = form.course === c.id;
+                    const meta = COURSE_META[c.vehicle_type] ?? COURSE_META.car;
+                    const Icon = meta.icon;
+                    return (
+                      <button
+                        key={c.id} type="button"
+                        onClick={() => setForm((f) => ({ ...f, course: c.id }))}
+                        className={cn(
+                          "flex w-full items-center gap-4 rounded-xl border-2 p-4 text-left transition-all",
+                          selected ? "border-brand-blue bg-brand-blue-light" : "border-border bg-white hover:border-muted-foreground/30",
+                        )}
+                      >
+                        <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-${meta.tone}-light text-${meta.tone}`}>
+                          <Icon className="h-6 w-6" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-navy">{c.name}</p>
+                          <p className="text-sm text-muted-foreground">KES {Number(c.price).toLocaleString()}</p>
+                        </div>
+                        {selected && (
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-blue text-white">
+                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <div className="mt-8 flex justify-between">
                 <Button variant="secondary" size="lg" onClick={() => setStep(1)}><ArrowLeft /> Back</Button>
-                <Button variant="primary" size="lg" onClick={() => setStep(3)}>Continue <ArrowRight /></Button>
+                <Button variant="primary" size="lg" onClick={() => setStep(3)} disabled={!form.course}>
+                  Continue <ArrowRight />
+                </Button>
               </div>
             </>
           )}
 
+          {/* Step 3 — Branch */}
           {step === 3 && (
             <>
               <h1 className="text-h2 text-navy">Select branch</h1>
               <p className="mt-1 text-sm text-muted-foreground">Pick the branch closest to you.</p>
-              <div className="mt-6 space-y-3">
-                {BRANCHES.map((b) => {
-                  const selected = form.branch === b.id;
-                  return (
-                    <button key={b.id} type="button" onClick={() => setForm({ ...form, branch: b.id })}
-                      className={cn("flex w-full items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
-                        selected ? "border-brand-blue bg-brand-blue-light" : "border-border bg-white hover:border-muted-foreground/30")}>
-                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-light text-brand">
-                        <MapPin className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-navy">{b.name}</p>
-                        <p className="text-sm text-muted-foreground">{b.address}</p>
-                        <Badge variant="success" size="sm" className="mt-2">{b.slots} slots available</Badge>
-                      </div>
-                      {selected && <div className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-brand-blue text-white"><Check className="h-3.5 w-3.5" strokeWidth={3} /></div>}
-                    </button>
-                  );
-                })}
-              </div>
+              {dataLoading ? (
+                <div className="mt-8 flex justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-border border-t-brand" />
+                </div>
+              ) : branches.length === 0 ? (
+                <p className="mt-6 text-sm text-muted-foreground">No branches available yet. Please contact the school.</p>
+              ) : (
+                <div className="mt-6 space-y-3">
+                  {branches.map((b) => {
+                    const selected = form.branch === b.id;
+                    return (
+                      <button
+                        key={b.id} type="button"
+                        onClick={() => setForm((f) => ({ ...f, branch: b.id }))}
+                        className={cn(
+                          "flex w-full items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
+                          selected ? "border-brand-blue bg-brand-blue-light" : "border-border bg-white hover:border-muted-foreground/30",
+                        )}
+                      >
+                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-light text-brand">
+                          <MapPin className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-navy">{b.name}</p>
+                          {b.address && <p className="text-sm text-muted-foreground">{b.address}</p>}
+                        </div>
+                        {selected && (
+                          <div className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-brand-blue text-white">
+                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <div className="mt-8 flex justify-between">
                 <Button variant="secondary" size="lg" onClick={() => setStep(2)}><ArrowLeft /> Back</Button>
-                <Button variant="primary" size="lg" onClick={submit} disabled={loading}>
+                <Button variant="primary" size="lg" onClick={submit} disabled={loading || !form.branch}>
                   {loading ? "Creating account…" : "Complete registration"}
                 </Button>
               </div>
-              <p className="mt-4 text-center text-xs text-muted-foreground">By registering you agree to our Terms of Service.</p>
+              <p className="mt-4 text-center text-xs text-muted-foreground">
+                By registering you agree to our Terms of Service.
+              </p>
             </>
           )}
         </div>

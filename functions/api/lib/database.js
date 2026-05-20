@@ -172,7 +172,8 @@ export const StudentService = {
 
   async findByUserId(db, userId) {
     const query = `
-      SELECT s.*, c.name as course_name, c.price as course_price, b.name as branch_name
+      SELECT s.*, c.name as course_name, c.price as course_price, c.lesson_count,
+             b.name as branch_name
       FROM students s
       LEFT JOIN courses c ON s.course_id = c.id
       LEFT JOIN branches b ON s.branch_id = b.id
@@ -255,13 +256,13 @@ export const StudentService = {
     const student = await this.findById(db, studentId);
     if (!student) throw new DatabaseError('Student not found');
 
-    // Get all completed payments for this student
+    // Get sum of all completed payments for this student
     const paymentsResult = await executeQuery(db, 
-      `SELECT SUM(amount) as total FROM payments WHERE student_id = ? AND status = 'completed'`,
+      `SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE student_id = ? AND status = 'completed'`,
       [studentId]
     );
 
-    const totalPaid = parseFloat(paymentsResult.results[0]?.total || 0);
+    const totalPaid = parseFloat(paymentsResult.results?.[0]?.total ?? 0);
     const coursePrice = parseFloat(student.course_price || 0);
     const newBalance = Math.max(0, coursePrice - totalPaid);
 
