@@ -1,6 +1,6 @@
 import { UserService, StudentService, CourseService, BranchService, verifyPassword } from "../lib/database.js";
 import { generateToken, createSession, authenticate, checkRole } from "../lib/auth.js";
-import { ok, created, badRequest, unauthorized } from "../lib/response.js";
+import { ok, created, badRequest, unauthorized, serverError } from "../lib/response.js";
 
 const normalizeEmail = (value) => String(value ?? '').trim().toLowerCase();
 const ADMIN_ROLES = ['super_admin', 'branch_admin', 'instructor', 'finance', 'examiner'];
@@ -162,7 +162,7 @@ export function registerAuthRoutes(router) {
       });
     } catch (error) {
       console.error('Login error:', error);
-      return badRequest(error.message);
+      return serverError(error.message || 'Login failed');
     }
   });
 

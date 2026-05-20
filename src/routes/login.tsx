@@ -30,25 +30,21 @@ function LoginPage() {
     e.preventDefault();
     setLoading(true);
     
-    const { data, error } = await api.post<{ token: string; user: any; roles: string[] }>("/auth/login", { 
-      email, 
-      password 
+    const { data, error } = await api.post<{ token: string; user: any; roles: string[] }>('/auth/login', {
+      email: email.trim(),
+      password,
     });
     
     setLoading(false);
     
-    if (error || !data) { 
-      toast.error(error || "Login failed"); 
-      return; 
+    if (error || !data) {
+      toast.error(error || 'Login failed');
+      return;
     }
     
-    // Store token
     api.setAuthToken(data.token);
-    
-    toast.success("Welcome back!");
-    
-    // Reload to update auth context
-    window.location.href = "/dashboard";
+    toast.success('Welcome back!');
+    navigate({ to: '/dashboard' });
   };
 
   return (

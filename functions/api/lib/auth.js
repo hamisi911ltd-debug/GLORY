@@ -1,6 +1,6 @@
 import jwt from '@tsndr/cloudflare-worker-jwt';
 import { UserService, generateId } from "./database.js";
-import { unauthorized, badRequest, forbidden, serverError } from "./response.js";
+import { unauthorized, forbidden, serverError } from "./response.js";
 
 /**
  * JWT Authentication for Cloudflare D1
@@ -10,6 +10,10 @@ import { unauthorized, badRequest, forbidden, serverError } from "./response.js"
  * Generate JWT token for user
  */
 export async function generateToken(user, env) {
+  if (!env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+
   const payload = {
     sub: user.id,
     email: user.email,
@@ -24,6 +28,10 @@ export async function generateToken(user, env) {
  * Verify JWT token
  */
 export async function verifyToken(token, env) {
+  if (!env.JWT_SECRET) {
+    return { success: false, error: 'JWT_SECRET is not configured' };
+  }
+
   try {
     const payload = await jwt.verify(token, env.JWT_SECRET);
     return { success: true, payload };
