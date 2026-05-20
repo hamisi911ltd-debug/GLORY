@@ -167,6 +167,50 @@ export function registerAuthRoutes(router) {
   });
 
   /**
+   * POST /api/auth/test-account
+   */
+  router.post("/api/auth/test-account", async (req, env) => {
+    const { secret, email = "test@immacurate.co.ke", password = "Test1234!" } = req.body ?? {};
+    const authSecret = env.TEST_ACCOUNT_SECRET ?? env.ADMIN_CREATION_SECRET;
+
+    if (!authSecret) {
+      return badRequest("Test account creation is not configured");
+    }
+    if (secret !== authSecret) {
+      return unauthorized("Unauthorized");
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+
+    try {
+      const existingUser = await UserService.findByEmail(env.DB, normalizedEmail);
+      if (existingUser) {
+        return ok({
+          message: "Test account already exists",
+          email: normalizedEmail,
+        });
+      }
+
+      const user = await UserService.create(env.DB, {
+        email: normalizedEmail,
+        password,
+        full_name: "Test User",
+        phone: null,
+      });
+      await UserService.addRole(env.DB, user.id, "student");
+
+      return created({
+        message: "Test account created",
+        email: normalizedEmail,
+        password,
+      });
+    } catch (error) {
+      console.error('Create test account error:', error);
+      return serverError(error.message || 'Could not create test account');
+    }
+  });
+
+  /**
    * GET /api/auth/me
    */
   router.get("/api/auth/me", async (req, env) => {
