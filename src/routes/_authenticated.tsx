@@ -9,10 +9,6 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async ({ location }: { location: { href: string } }) => {
-    const token = api.getAuthToken();
-    if (!token) throw redirect({ to: "/login", search: { redirect: location.href } });
-  },
   component: AuthenticatedLayout,
 });
 
@@ -223,7 +219,7 @@ function AuthenticatedLayout() {
             >
               <Icon className={cn("h-5 w-5", active && "animate-in zoom-in-75 duration-300")} />
               <span className="text-[10px] font-medium">{item.label}</span>
-              {active && <motion.div layoutId="mobile-nav-indicator" className="h-1 w-1 rounded-full bg-brand" />}
+              {active && <motion.div layoutId={`mobile-nav-indicator-${item.label}`} className="h-1 w-1 rounded-full bg-brand" />}
             </Link>
           );
         })}
