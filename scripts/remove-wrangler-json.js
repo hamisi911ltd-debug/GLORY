@@ -4,6 +4,10 @@
  * The plugin generates a fully-expanded wrangler.json that Cloudflare Pages
  * reads at deploy time. It includes fields that are Workers-only and are
  * rejected by the Pages validator. We strip them here.
+ * 
+ * IMPORTANT: We KEEP the following fields for SSR to work:
+ * - main: Points to dist/server/server.js (the SSR entry point)
+ * - pages_build_output_dir: Points to dist/client (static assets location)
  */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -21,11 +25,11 @@ if (!existsSync(file)) {
 const config = JSON.parse(readFileSync(file, "utf-8"));
 
 // Fields not supported by Cloudflare Pages configuration
+// NOTE: We do NOT remove "main" or "pages_build_output_dir" - they're needed for SSR!
 const invalidForPages = [
   // Workers-only fields
   "assets",           // Pages error: "does not support assets"
   "triggers",         // Pages error: "expected crons array"
-  "main",
   "build",
   // Unknown/future fields that cause parse errors
   "definedEnvironments",
@@ -105,10 +109,17 @@ if (config.vars && Object.keys(config.vars).length === 0) {
   delete config.vars;
 }
 
-// Remove pages_build_output_dir from the generated file entirely.
-// The root wrangler.toml already defines it correctly as "./dist/client".
-// Having it in the generated dist/client/wrangler.json causes path doubling.
-delete config.pages_build_output_dir;
+// KEEP pages_build_output_dir - it's needed for Pages to find static assets!
+// Just ensure it's set correctly
+if (!config.pages_build_output_dir) {
+  config.pages_build_output_dir = "dist/client";
+}
+
+// KEEP main - it's needed for SSR to work!
+// Just ensure it points to the correct server entry
+if (!config.main) {
+  config.main = "dist/server/server.js";
+}
 
 // Ensure D1 database binding has the correct database_id (the vite plugin may
 // generate a placeholder or omit it entirely)
@@ -134,3 +145,6 @@ if (existingBinding) {
 writeFileSync(file, JSON.stringify(config, null, 2));
 console.log("✅ dist/client/wrangler.json cleaned for Cloudflare Pages deploy.");
 console.log("   Remaining fields:", Object.keys(config).join(", "));
+console.log("   ✓ main:", config.main);
+console.log("   ✓ pages_build_output_dir:", config.pages_build_output_dir);
+
