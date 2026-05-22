@@ -1,8 +1,9 @@
 /**
  * Create _worker.js in dist/client/ for Cloudflare Pages SSR
  * 
- * Pages SSR requires a _worker.js file in the output directory that
- * imports and re-exports the server entry point.
+ * Pages SSR requires a _worker.js file in the output directory that:
+ * 1. Serves static assets from the assets directory
+ * 2. Handles SSR for dynamic routes via the server entry
  */
 
 import { writeFileSync, existsSync } from 'fs';
@@ -23,20 +24,47 @@ if (!existsSync(serverEntry)) {
   process.exit(1);
 }
 
-// Create the _worker.js that imports the server
+// Create the _worker.js that handles both static assets and SSR
 const workerContent = `/**
  * Cloudflare Pages SSR Worker Entry
- * This file imports and re-exports the TanStack Start server entry
+ * Handles static asset serving and SSR routing
  */
 
-// Import the server entry from the build output
+// Import the TanStack Start server entry
 import server from '../server/server.js';
 
-// Re-export as the default export for Pages
-export default server;
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    
+    // Serve static assets from the assets directory
+    // These are excluded from the worker in _routes.json but we handle them here for safety
+    if (url.pathname.startsWith('/assets/')) {
+      // Try to get the asset from the environment's ASSETS binding
+      // Cloudflare Pages automatically provides this
+      if (env.ASSETS) {
+        try {
+          const asset = await env.ASSETS.fetch(request);
+          if (asset.status !== 404) {
+            return asset;
+          }
+        } catch (e) {
+          console.error('Asset fetch error:', e);
+        }
+      }
+      
+      // If ASSETS binding not available or asset not found, return 404
+      return new Response('Not Found', { status: 404 });
+    }
+    
+    // For all other routes, use the TanStack Start server
+    return server.fetch(request, env, ctx);
+  }
+};
 `;
 
 writeFileSync(workerFile, workerContent);
 console.log('✅ _worker.js created successfully!');
 console.log(`   Location: ${workerFile}`);
-console.log(`   Imports from: ../server/server.js`);
+console.log(`   Handles: Static assets + SSR routing`);
+
