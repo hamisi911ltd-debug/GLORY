@@ -5,6 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { PublicNav } from "@/components/site/PublicNav";
 import { Footer } from "@/components/site/Footer";
 
+const TONE_STYLES = {
+  info: { bg: "bg-blue-100", text: "text-blue-600" },
+  warning: { bg: "bg-yellow-100", text: "text-yellow-600" },
+  purple: { bg: "bg-purple-100", text: "text-purple-600" },
+} as const;
+
 const COURSES = {
   car: { icon: Car, name: "Car Driving Course", className: "Class B", tone: "info", lessons: 20, includes: ["20 professional lessons (1hr each)", "Theory test preparation", "Mock examination", "Certificate of completion", "Free lesson rescheduling"], packages: [{ name: "Basic", price: 8500, items: ["20 lessons", "Theory prep", "1 mock test", "Certificate"] }, { name: "Standard", price: 11500, items: ["25 lessons", "Theory prep", "3 mock tests", "Pickup service", "Certificate"] }, { name: "Premium", price: 16500, items: ["30 lessons", "1-on-1 instructor", "Unlimited mocks", "Pickup service", "Exam booking", "Certificate"] }] },
   motorcycle: { icon: Bike, name: "Motorcycle Course", className: "Class A", tone: "warning", lessons: 12, includes: ["12 riding lessons", "Safety gear training", "Highway code", "Mock test", "Certificate of completion"], packages: [{ name: "Basic", price: 6000, items: ["12 lessons", "Theory prep", "Certificate"] }, { name: "Standard", price: 8500, items: ["15 lessons", "Gear included", "2 mock tests", "Certificate"] }, { name: "Premium", price: 11000, items: ["20 lessons", "Premium gear", "Unlimited mocks", "Certificate"] }] },
@@ -29,6 +35,7 @@ export const Route = createFileRoute("/courses/$courseId")({
 function CoursePage() {
   const { course } = Route.useLoaderData();
   const Icon = course.icon;
+  const styles = TONE_STYLES[course.tone];
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,8 +57,8 @@ function CoursePage() {
               Built around real-world Kenyan driving conditions. Our instructors will get you confident, safe, and ready to pass.
             </p>
 
-            <div className={`mt-8 flex h-48 items-center justify-center rounded-2xl bg-${course.tone}-light`}>
-              <Icon className={`h-24 w-24 text-${course.tone}`} strokeWidth={1.25} />
+            <div className={`mt-8 flex h-48 items-center justify-center rounded-2xl ${styles.bg}`}>
+              <Icon className={`h-24 w-24 ${styles.text}`} strokeWidth={1.25} />
             </div>
 
             <div className="mt-10">

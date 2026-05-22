@@ -12,10 +12,16 @@ export const Route = createFileRoute("/_authenticated/book")({
 });
 
 const VEHICLE_TYPES = [
-  { id: "car", label: "Car", icon: Car, tone: "info" },
-  { id: "motorcycle", label: "Motorcycle", icon: Bike, tone: "warning" },
-  { id: "hgv", label: "HGV / Truck", icon: Truck, tone: "purple" },
+  { id: "car", label: "Car", icon: Car, tone: "info" as const },
+  { id: "motorcycle", label: "Motorcycle", icon: Bike, tone: "warning" as const },
+  { id: "hgv", label: "HGV / Truck", icon: Truck, tone: "purple" as const },
 ] as const;
+
+const TONE_STYLES = {
+  info: { bg: "bg-blue-100", text: "text-blue-600" },
+  warning: { bg: "bg-yellow-100", text: "text-yellow-600" },
+  purple: { bg: "bg-purple-100", text: "text-purple-600" },
+} as const;
 
 const INSTRUCTORS = [
   { id: "jm", name: "James Mwangi", rating: 4.9, reviews: 47, slots: 8, vehicle: "car", initials: "JM" },
@@ -102,6 +108,7 @@ function BookPage() {
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
               {VEHICLE_TYPES.map((v) => {
                 const sel = vehicle === v.id;
+                const styles = TONE_STYLES[v.tone];
                 return (
                   <button
                     key={v.id}
@@ -116,7 +123,7 @@ function BookPage() {
                         <Check className="h-3 w-3" strokeWidth={3} />
                       </span>
                     )}
-                    <div className={`flex h-14 w-14 items-center justify-center rounded-xl bg-${v.tone}-light text-${v.tone}`}>
+                    <div className={`flex h-14 w-14 items-center justify-center rounded-xl ${styles.bg} ${styles.text}`}>
                       <v.icon className="h-7 w-7" />
                     </div>
                     <span className="font-semibold text-navy">{v.label}</span>

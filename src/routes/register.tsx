@@ -20,7 +20,13 @@ export const Route = createFileRoute("/register")({
 });
 
 // Maps vehicle_type from DB to display metadata
-const COURSE_META: Record<string, { icon: any; tone: string }> = {
+const TONE_STYLES = {
+  info: { bg: "bg-blue-100", text: "text-blue-600" },
+  warning: { bg: "bg-yellow-100", text: "text-yellow-600" },
+  purple: { bg: "bg-purple-100", text: "text-purple-600" },
+} as const;
+
+const COURSE_META: Record<string, { icon: any; tone: keyof typeof TONE_STYLES }> = {
   car:        { icon: Car,   tone: "info" },
   manual:     { icon: Car,   tone: "info" },
   automatic:  { icon: Car,   tone: "info" },
@@ -180,6 +186,7 @@ function RegisterPage() {
                     const selected = form.course === c.id;
                     const meta = COURSE_META[c.vehicle_type] ?? COURSE_META.car;
                     const Icon = meta.icon;
+                    const styles = TONE_STYLES[meta.tone];
                     return (
                       <button
                         key={c.id} type="button"
@@ -189,7 +196,7 @@ function RegisterPage() {
                           selected ? "border-brand-blue bg-brand-blue-light" : "border-border bg-white hover:border-muted-foreground/30",
                         )}
                       >
-                        <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-${meta.tone}-light text-${meta.tone}`}>
+                        <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${styles.bg} ${styles.text}`}>
                           <Icon className="h-6 w-6" />
                         </div>
                         <div className="flex-1">

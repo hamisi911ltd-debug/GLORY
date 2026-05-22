@@ -21,10 +21,16 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
+const TONE_STYLES = {
+  info: { bg: "bg-blue-100", text: "text-blue-600" },
+  warning: { bg: "bg-yellow-100", text: "text-yellow-600" },
+  purple: { bg: "bg-purple-100", text: "text-purple-600" },
+} as const;
+
 const courses = [
-  { slug: "car", icon: Car, name: "Car Driving", className: "Class B", desc: "Master cars from manual to automatic. Includes theory, mock tests, and 20 lessons.", lessons: 20, duration: "6 weeks", price: 8500, tone: "info", featured: true },
-  { slug: "motorcycle", icon: Bike, name: "Motorcycle", className: "Class A", desc: "Build confidence on two wheels. Safety first, with experienced rider instructors.", lessons: 12, duration: "4 weeks", price: 6000, tone: "warning", featured: false },
-  { slug: "hgv", icon: Truck, name: "HGV / Truck", className: "Class C", desc: "Open commercial driving careers. Heavy vehicle handling with certified examiners.", lessons: 30, duration: "10 weeks", price: 14000, tone: "purple", featured: false },
+  { slug: "car", icon: Car, name: "Car Driving", className: "Class B", desc: "Master cars from manual to automatic. Includes theory, mock tests, and 20 lessons.", lessons: 20, duration: "6 weeks", price: 8500, tone: "info" as const, featured: true },
+  { slug: "motorcycle", icon: Bike, name: "Motorcycle", className: "Class A", desc: "Build confidence on two wheels. Safety first, with experienced rider instructors.", lessons: 12, duration: "4 weeks", price: 6000, tone: "warning" as const, featured: false },
+  { slug: "hgv", icon: Truck, name: "HGV / Truck", className: "Class C", desc: "Open commercial driving careers. Heavy vehicle handling with certified examiners.", lessons: 30, duration: "10 weeks", price: 14000, tone: "purple" as const, featured: false },
 ] as const;
 
 const steps = [
@@ -146,7 +152,9 @@ function HomePage() {
             <p className="mt-3 text-muted-foreground">Whether you're after a personal license or a commercial career, we've got a track for you.</p>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {courses.map((c) => (
+            {courses.map((c) => {
+              const styles = TONE_STYLES[c.tone];
+              return (
               <motion.div
                 key={c.slug}
                 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -155,8 +163,8 @@ function HomePage() {
                 {c.featured && (
                   <Badge variant="brand" className="absolute right-4 top-4 z-10">Most popular</Badge>
                 )}
-                <div className={`h-40 bg-${c.tone}-light flex items-center justify-center`}>
-                  <c.icon className={`h-16 w-16 text-${c.tone}`} strokeWidth={1.25} />
+                <div className={`h-40 flex items-center justify-center ${styles.bg}`}>
+                  <c.icon className={`h-16 w-16 ${styles.text}`} strokeWidth={1.25} />
                 </div>
                 <div className="flex flex-1 flex-col p-6">
                   <Badge variant={c.tone as any} size="sm" className="self-start">{c.className}</Badge>
@@ -178,7 +186,8 @@ function HomePage() {
                   </div>
                 </div>
               </motion.div>
-            ))}
+            );
+            })}
           </div>
         </div>
       </section>

@@ -1,7 +1,11 @@
 /**
- * Cloudflare Pages Function - API Proxy Handler
- * This proxies all /api/* requests to the backend Worker
- * The actual API logic is in the backend Worker deployed separately
+ * Cloudflare Pages Function - API Handler
+ * This handler proxies requests to the deployed backend Worker
+ * 
+ * DEPLOYMENT NOTE:
+ * 1. Deploy the backend Worker first: cd backend && wrangler deploy
+ * 2. Update BACKEND_WORKER_URL below with your Worker URL
+ * 3. Or set it as an environment variable in Cloudflare Pages
  */
 
 export async function onRequest(context) {
@@ -26,28 +30,60 @@ export async function onRequest(context) {
     });
   }
 
-  // Simple health check
+  // Get backend Worker URL from environment or use default
+  const BACKEND_WORKER_URL = env.BACKEND_WORKER_URL || "https://driveschool-pro-api.YOUR_SUBDOMAIN.workers.dev";
+
+  // Simple health check (doesn't require backend)
   if (url.pathname === "/api/health" || url.pathname === "/api/health/") {
     return new Response(JSON.stringify({ 
       status: "ok", 
       service: "DriveSchool Pro API Proxy",
       timestamp: new Date().toISOString(),
-      note: "API requests are handled by the backend Worker"
+      backend: BACKEND_WORKER_URL,
+      note: "This is the Pages Function proxy. Backend Worker handles actual API logic."
     }), { 
       status: 200, 
       headers: { "Content-Type": "application/json", ...corsHeaders } 
     });
   }
 
-  // For now, return a message indicating the backend Worker needs to be deployed
-  // In production, you would proxy to your backend Worker URL
-  return new Response(JSON.stringify({ 
-    error: "Backend not configured",
-    message: "The backend Worker needs to be deployed and configured. Please deploy the backend Worker from the /backend directory.",
-    endpoint: url.pathname,
-    method: request.method
-  }), { 
-    status: 503, 
-    headers: { "Content-Type": "application/json", ...corsHeaders } 
-  });
+  // Proxy all other requests to the backend Worker
+  try {
+    // Remove /api prefix and forward to backend
+    const backendPath = url.pathname.replace(/^\/api/, '');
+    const backendUrl = `${BACKEND_WORKER_URL}${backendPath}${url.search}`;
+
+    // Forward the request to the backend Worker
+    const backendRequest = new Request(backendUrl, {
+      method: request.method,
+      headers: request.headers,
+      body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
+    });
+
+    const backendResponse = await fetch(backendRequest);
+
+    // Return the backend response with CORS headers
+    const responseHeaders = new Headers(backendResponse.headers);
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      responseHeaders.set(key, value);
+    });
+
+    return new Response(backendResponse.body, {
+      status: backendResponse.status,
+      statusText: backendResponse.statusText,
+      headers: responseHeaders,
+    });
+
+  } catch (error) {
+    console.error('Backend proxy error:', error);
+    return new Response(JSON.stringify({ 
+      error: "Backend unavailable",
+      message: "Could not connect to backend Worker. Please ensure it's deployed.",
+      details: error.message,
+      backend: BACKEND_WORKER_URL
+    }), { 
+      status: 503, 
+      headers: { "Content-Type": "application/json", ...corsHeaders } 
+    });
+  }
 }

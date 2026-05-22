@@ -20,6 +20,12 @@ const lessons = [
   { id: 3, day: "Mon", date: "19 May", time: "9:00 AM", instructor: "James Mwangi", initials: "JM", vehicle: "Car", plate: "KAB 123X", status: "pending", color: "var(--color-info)" },
 ];
 
+const TONE_STYLES = {
+  info: { bg: "bg-blue-100", text: "text-blue-600" },
+  warning: { bg: "bg-yellow-100", text: "text-yellow-600" },
+  purple: { bg: "bg-purple-100", text: "text-purple-600" },
+} as const;
+
 const milestones = [
   { label: "Enrolled", state: "done" },
   { label: "Theory Module 1", state: "done" },
@@ -431,11 +437,7 @@ function DashboardPage() {
               warning: "border-warning-light bg-warning-light/5",
               purple: "border-purple-light bg-purple-light/5",
             };
-            const toneText = {
-              info: "text-info",
-              warning: "text-warning",
-              purple: "text-purple",
-            };
+            const styles = TONE_STYLES[course.tone];
 
             return (
               <div
@@ -446,7 +448,7 @@ function DashboardPage() {
                   <div className="absolute -right-12 -top-12 h-24 w-24 rounded-full bg-brand/10 blur-2xl group-hover:bg-brand/20 transition-all" />
                 )}
                 <div className="relative">
-                  <div className={`inline-flex h-12 w-12 items-center justify-center rounded-lg bg-${course.tone}-light text-${course.tone}`}>
+                  <div className={`inline-flex h-12 w-12 items-center justify-center rounded-lg ${styles.bg} ${styles.text}`}>
                     <Icon className="h-6 w-6" />
                   </div>
                   <div className="mt-4">
